@@ -85,6 +85,7 @@
                             </div>
                         </div>
                         <div class="flex items-center gap-x-4">
+                            <button id="change-fac-photo-btn" onclick="changeFacPhoto()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl hidden">Mudar Foto</button>
                             <button onclick="leaveFac()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-red-600 rounded-xl">Sair</button>
                             <button onclick="declareWar()" class="text-red-500"><i class="fa-solid fa-bomb"></i></button>
                         </div>
@@ -106,13 +107,11 @@
     <div id="create-modal" onclick="if(event.target.id==='create-modal') hideCreateModal()" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
         <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 p-6 rounded-3xl w-full max-w-md mx-4">
             <h3 class="font-semibold mb-4">Criar Nova Fac</h3>
-            
             <div class="flex flex-col items-center mb-4">
                 <img id="fac-preview" src="https://picsum.photos/id/1011/80/80" class="w-20 h-20 rounded-2xl object-cover border border-zinc-700 mb-2">
                 <input type="file" id="fac-photo-upload" accept="image/*" class="hidden" onchange="previewFacPhoto(event)">
-                <button onclick="document.getElementById('fac-photo-upload').click()" class="text-xs bg-zinc-800 px-3 py-1 rounded-xl">Escolher foto da fac</button>
+                <button onclick="document.getElementById('fac-photo-upload').click()" class="text-xs bg-zinc-800 px-3 py-1 rounded-xl">Escolher foto</button>
             </div>
-
             <input id="fac-name" type="text" value="KRYPTON" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-3">
             <button onclick="createFac()" class="w-full bg-green-600 py-3 rounded-2xl font-semibold">Criar Fac</button>
         </div>
@@ -149,9 +148,21 @@
         function login() {
             const nick = document.getElementById('nickname').value.trim();
             if (!nick) return;
+
+            // Evitar nomes duplicados (básico)
+            const existingUsers = Object.keys(localStorage).filter(k => k.startsWith('faczap_user_'));
+            for (let key of existingUsers) {
+                const u = JSON.parse(localStorage.getItem(key));
+                if (u && u.nickname.toLowerCase() === nick.toLowerCase()) {
+                    alert('Esse nome de usuário já existe!');
+                    return;
+                }
+            }
+
             currentUser = JSON.parse(localStorage.getItem('faczap_user')) || { nickname: nick, avatar: 'https://i.pravatar.cc/128?img=47' };
             if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
             localStorage.setItem('faczap_user', JSON.stringify(currentUser));
+
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('current-user').innerText = '@' + currentUser.nickname;
@@ -213,6 +224,13 @@
             const name = document.getElementById('fac-name').value.trim();
             if (!name) return;
 
+            // Evitar nomes duplicados de fac
+            const nameExists = facs.some(f => f.name.toLowerCase() === name.toLowerCase());
+            if (nameExists) {
+                alert('Já existe uma fac com esse nome!');
+                return;
+            }
+
             const newFac = {
                 id: Date.now(),
                 name: name,
@@ -253,6 +271,31 @@
             }
         }
 
+        function changeFacPhoto() {
+            const fac = facs.find(f => f.id === currentChatId);
+            if (!fac || fac.leader !== currentUser.nickname) {
+                alert('Só o líder da fac pode mudar a foto.');
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = 'image/*';
+            input.onchange = function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    fac.photo = ev.target.result;
+                    save();
+                    document.getElementById('chat-avatar').src = fac.photo;
+                    renderChatList();
+                };
+                reader.readAsDataURL(file);
+            };
+            input.click();
+        }
+
         function backToList() {
             currentChatId = null;
             document.getElementById('chat-window').classList.add('hidden');
@@ -271,6 +314,12 @@
             document.getElementById('chat-name').innerText = fac.name;
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
+
+            // Mostrar botão de mudar foto só para o líder
+            const changeBtn = document.getElementById('change-fac-photo-btn');
+            if (changeBtn) {
+                changeBtn.style.display = (fac.leader === currentUser.nickname) ? 'block' : 'none';
+            }
 
             renderMessages();
         }
