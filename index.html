@@ -37,15 +37,15 @@
                 <i class="fa-brands fa-whatsapp text-green-500 text-2xl"></i>
                 <span class="font-bold text-xl">Fac Zap</span>
             </div>
-            <div class="flex items-center gap-x-3">
+            <div class="flex items-center gap-x-3 cursor-pointer" onclick="editProfile()">
+                <img id="header-avatar" src="https://i.pravatar.cc/32" class="w-8 h-8 rounded-full object-cover border border-zinc-700">
                 <span id="current-user" class="text-sm text-zinc-400"></span>
-                <button onclick="logout()" class="text-xs px-3 py-1 border border-zinc-700 rounded-xl">Sair</button>
             </div>
         </div>
 
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar -->
-            <div id="sidebar" class="w-80 border-r border-zinc-800 flex flex-col transition-all">
+            <div id="sidebar" class="w-80 border-r border-zinc-800 flex flex-col">
                 <div class="p-3 border-b border-zinc-800">
                     <input type="text" placeholder="Buscar..." class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2 text-sm">
                 </div>
@@ -61,34 +61,31 @@
                 <div class="px-2 flex-1 overflow-auto" id="chat-list"></div>
 
                 <div class="px-2 mt-2">
-                    <div class="text-xs uppercase tracking-widest text-zinc-500 px-3 mb-1">Outras Facs (Entrar)</div>
+                    <div class="text-xs uppercase tracking-widest text-zinc-500 px-3 mb-1">Outras Facs</div>
                     <div id="other-facs-list" class="px-2"></div>
                 </div>
             </div>
 
-            <!-- Chat Area -->
+            <!-- Chat -->
             <div class="flex-1 flex flex-col">
                 <div id="empty-state" class="flex-1 flex items-center justify-center text-zinc-500">
-                    Selecione ou entre em uma fac
+                    Selecione ou entre em uma conversa
                 </div>
 
                 <div id="chat-window" class="hidden flex-1 flex flex-col">
-                    <!-- Header com voltar -->
                     <div class="px-4 py-2.5 border-b border-zinc-800 flex items-center gap-x-3 bg-[#18181b]">
                         <button onclick="backToList()" class="text-xl px-2 text-zinc-400 hover:text-white">
                             <i class="fa-solid fa-arrow-left"></i>
                         </button>
-                        <div class="flex items-center gap-x-3 flex-1">
-                            <div class="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center">
-                                <i class="fa-solid fa-users text-green-400"></i>
-                            </div>
+                        <div class="flex items-center gap-x-3 flex-1 cursor-pointer" onclick="showProfileModal()">
+                            <img id="chat-avatar" src="https://i.pravatar.cc/40" class="w-10 h-10 rounded-full object-cover border border-zinc-700">
                             <div>
                                 <div id="chat-name" class="font-semibold"></div>
                                 <div id="chat-info" class="text-xs text-emerald-400"></div>
                             </div>
                         </div>
                         <div class="flex items-center gap-x-4">
-                            <button onclick="leaveFac()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-red-600 rounded-xl">Sair da Fac</button>
+                            <button onclick="leaveFac()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-red-600 rounded-xl">Sair</button>
                             <button onclick="declareWar()" class="text-red-500"><i class="fa-solid fa-bomb"></i></button>
                         </div>
                     </div>
@@ -114,6 +111,21 @@
         </div>
     </div>
 
+    <!-- Profile Modal -->
+    <div id="profile-modal" onclick="if(event.target.id==='profile-modal') hideProfileModal()" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
+        <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6 w-full max-w-sm mx-4">
+            <h3 class="font-semibold mb-4">Seu Perfil</h3>
+            <div class="flex flex-col items-center">
+                <img id="profile-avatar" src="https://i.pravatar.cc/80" class="w-20 h-20 rounded-full object-cover border border-zinc-700 mb-4">
+                <input type="file" id="avatar-upload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
+                <button onclick="document.getElementById('avatar-upload').click()" class="text-sm bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-2xl mb-4">
+                    Mudar foto de perfil
+                </button>
+            </div>
+            <button onclick="hideProfileModal()" class="w-full py-2 rounded-2xl border border-zinc-700">Fechar</button>
+        </div>
+    </div>
+
     <script>
         let currentUser = null;
         let facs = JSON.parse(localStorage.getItem('faczap_facs') || '[]');
@@ -123,21 +135,48 @@
         function save() {
             localStorage.setItem('faczap_facs', JSON.stringify(facs));
             localStorage.setItem('faczap_messages', JSON.stringify(allMessages));
+            if (currentUser) localStorage.setItem('faczap_user', JSON.stringify(currentUser));
         }
 
         function login() {
             const nick = document.getElementById('nickname').value.trim();
             if (!nick) return;
-            currentUser = { nickname: nick };
+            currentUser = JSON.parse(localStorage.getItem('faczap_user')) || { nickname: nick, avatar: 'https://i.pravatar.cc/128?img=47' };
+            if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
             localStorage.setItem('faczap_user', JSON.stringify(currentUser));
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('current-user').innerText = '@' + nick;
+            document.getElementById('current-user').innerText = '@' + currentUser.nickname;
+            document.getElementById('header-avatar').src = currentUser.avatar;
             renderChatList();
             renderOtherFacs();
         }
 
-        function logout() { location.reload(); }
+        function logout() { localStorage.removeItem('faczap_user'); location.reload(); }
+
+        function editProfile() {
+            document.getElementById('profile-modal').classList.remove('hidden');
+            document.getElementById('profile-modal').classList.add('flex');
+            document.getElementById('profile-avatar').src = currentUser.avatar;
+        }
+
+        function hideProfileModal() {
+            document.getElementById('profile-modal').classList.remove('flex');
+            document.getElementById('profile-modal').classList.add('hidden');
+        }
+
+        function uploadAvatar(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                currentUser.avatar = ev.target.result;
+                document.getElementById('profile-avatar').src = currentUser.avatar;
+                document.getElementById('header-avatar').src = currentUser.avatar;
+                save();
+            };
+            reader.readAsDataURL(file);
+        }
 
         function showCreateFac() {
             document.getElementById('create-modal').classList.remove('hidden');
@@ -197,8 +236,6 @@
 
         function openChat(facId) {
             currentChatId = facId;
-
-            // Esconde sidebar completamente para tela cheia
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('chat-window').classList.remove('hidden');
@@ -206,6 +243,7 @@
             const fac = facs.find(f => f.id === facId);
             document.getElementById('chat-name').innerText = fac.name;
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
+            document.getElementById('chat-avatar').src = currentUser.avatar;
 
             renderMessages();
         }
@@ -247,17 +285,12 @@
                         <div>${fac.name}</div>
                         <button class="text-xs bg-green-600 px-2 py-0.5 rounded">Entrar</button>
                     `;
-                    div.querySelector('button').onclick = (e) => {
-                        e.stopImmediatePropagation();
-                        joinFac(fac.id);
-                    };
+                    div.querySelector('button').onclick = (e) => { e.stopImmediatePropagation(); joinFac(fac.id); };
                     container.appendChild(div);
                 }
             });
 
-            if (!hasOther) {
-                container.innerHTML = `<div class="text-xs text-zinc-500 px-3">Nenhuma outra fac disponível</div>`;
-            }
+            if (!hasOther) container.innerHTML = `<div class="text-xs text-zinc-500 px-3">Nenhuma outra fac disponível</div>`;
         }
 
         function renderMessages() {
@@ -312,13 +345,20 @@
             renderMessages();
         }
 
+        function showProfileModal() {
+            // Placeholder for future private chat or profile view
+            alert('Em breve: Chat privado e visualização de perfil!');
+        }
+
         function checkLogin() {
             const user = localStorage.getItem('faczap_user');
             if (user) {
                 currentUser = JSON.parse(user);
+                if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('current-user').innerText = '@' + currentUser.nickname;
+                document.getElementById('header-avatar').src = currentUser.avatar;
                 renderChatList();
                 renderOtherFacs();
             }
