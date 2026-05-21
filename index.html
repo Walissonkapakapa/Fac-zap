@@ -13,8 +13,9 @@
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
-    <!-- Login -->
-    <div id="login-screen" class="min-h-screen flex items-center justify-center">
+
+    <!-- Login / Register Screen -->
+    <div id="auth-screen" class="min-h-screen flex items-center justify-center">
         <div class="max-w-sm w-full px-4">
             <div class="text-center mb-8">
                 <div class="mx-auto w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mb-4">
@@ -23,9 +24,23 @@
                 <h1 class="text-5xl font-bold tracking-tighter">Fac Zap</h1>
                 <p class="text-zinc-400">As facs voltaram</p>
             </div>
-            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
-                <input id="nickname" type="text" value="KrypZin" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-4 text-center">
-                <button onclick="login()" class="w-full bg-green-600 py-3 rounded-2xl font-semibold">Entrar</button>
+
+            <!-- Login Form -->
+            <div id="login-form" class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+                <h2 class="text-xl font-semibold mb-4 text-center">Entrar</h2>
+                <input id="login-nickname" type="text" placeholder="Apelido" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-3">
+                <input id="login-password" type="password" placeholder="Senha" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-4">
+                <button onclick="login()" class="w-full bg-green-600 py-3 rounded-2xl font-semibold mb-3">Entrar</button>
+                <p class="text-center text-sm text-zinc-400">Não tem conta? <span onclick="showRegister()" class="text-green-500 cursor-pointer">Cadastre-se</span></p>
+            </div>
+
+            <!-- Register Form -->
+            <div id="register-form" class="hidden bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+                <h2 class="text-xl font-semibold mb-4 text-center">Criar Conta</h2>
+                <input id="register-nickname" type="text" placeholder="Apelido" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-3">
+                <input id="register-password" type="password" placeholder="Senha" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-4">
+                <button onclick="register()" class="w-full bg-green-600 py-3 rounded-2xl font-semibold mb-3">Cadastrar</button>
+                <p class="text-center text-sm text-zinc-400">Já tem conta? <span onclick="showLogin()" class="text-green-500 cursor-pointer">Entrar</span></p>
             </div>
         </div>
     </div>
@@ -37,9 +52,9 @@
                 <i class="fa-brands fa-whatsapp text-green-500 text-2xl"></i>
                 <span class="font-bold text-xl">Fac Zap</span>
             </div>
-            <div class="flex items-center gap-x-3 cursor-pointer" onclick="editProfile()">
-                <img id="header-avatar" src="https://i.pravatar.cc/32" class="w-8 h-8 rounded-full object-cover border border-zinc-700">
+            <div class="flex items-center gap-x-3">
                 <span id="current-user" class="text-sm text-zinc-400"></span>
+                <button onclick="logout()" class="text-xs px-3 py-1 border border-zinc-700 rounded-xl">Sair</button>
             </div>
         </div>
 
@@ -118,25 +133,10 @@
         </div>
     </div>
 
-    <!-- Profile Modal -->
-    <div id="profile-modal" onclick="if(event.target.id==='profile-modal') hideProfileModal()" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
-        <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 border border-zinc-700 rounded-3xl p-6 w-full max-w-sm mx-4">
-            <h3 class="font-semibold mb-4">Seu Perfil</h3>
-            <div class="flex flex-col items-center">
-                <img id="profile-avatar" src="https://i.pravatar.cc/80" class="w-20 h-20 rounded-full object-cover border border-zinc-700 mb-4">
-                <input type="file" id="avatar-upload" accept="image/*" class="hidden" onchange="uploadAvatar(event)">
-                <button onclick="document.getElementById('avatar-upload').click()" class="text-sm bg-zinc-800 hover:bg-zinc-700 px-4 py-2 rounded-2xl mb-4">
-                    Mudar foto de perfil
-                </button>
-            </div>
-            <button onclick="hideProfileModal()" class="w-full py-2 rounded-2xl border border-zinc-700">Fechar</button>
-        </div>
-    </div>
-
     <!-- Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDg5pqfwpO12boJpyZuJI0L-WCIrfttMFs",
@@ -155,6 +155,7 @@
         window.collection = collection;
         window.getDocs = getDocs;
         window.query = query;
+        window.where = where;
 
         console.log("Firebase carregado");
     </script>
@@ -166,6 +167,84 @@
         let currentChatId = null;
         let pendingFacPhoto = null;
 
+        // ==================== AUTH ====================
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+
+        function showLogin() {
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
+        }
+
+        async function register() {
+            const nick = document.getElementById('register-nickname').value.trim();
+            const pass = document.getElementById('register-password').value.trim();
+
+            if (!nick || !pass) return alert("Preencha apelido e senha");
+
+            try {
+                const usersRef = window.collection(window.db, "users");
+                const q = window.query(usersRef, window.where("nickname", "==", nick));
+                const snap = await window.getDocs(q);
+
+                if (!snap.empty) {
+                    return alert("Esse apelido já existe!");
+                }
+
+                await window.addDoc(usersRef, {
+                    nickname: nick,
+                    password: pass, // Em produção usar hash
+                    createdAt: new Date().toISOString()
+                });
+
+                alert("Conta criada! Faça login.");
+                showLogin();
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao cadastrar");
+            }
+        }
+
+        async function login() {
+            const nick = document.getElementById('login-nickname').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+
+            if (!nick || !pass) return alert("Preencha apelido e senha");
+
+            try {
+                const usersRef = window.collection(window.db, "users");
+                const q = window.query(usersRef, window.where("nickname", "==", nick), window.where("password", "==", pass));
+                const snap = await window.getDocs(q);
+
+                if (snap.empty) {
+                    return alert("Apelido ou senha incorretos");
+                }
+
+                currentUser = { nickname: nick };
+                localStorage.setItem('faczap_user', JSON.stringify(currentUser));
+
+                await loadFacsFromFirebase();
+
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('current-user').innerText = '@' + nick;
+
+                renderChatList();
+                renderOtherFacs();
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao fazer login");
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('faczap_user');
+            location.reload();
+        }
+
+        // ==================== FACS ====================
         async function loadFacsFromFirebase() {
             try {
                 const q = window.query(window.collection(window.db, "facs"));
@@ -178,134 +257,51 @@
                 });
             } catch (error) {
                 console.error("Erro ao carregar facs:", error);
-                facs = JSON.parse(localStorage.getItem('faczap_facs') || '[]');
             }
-        }
-
-        async function loadMessagesFromFirebase(facId) {
-            try {
-                const q = window.query(window.collection(window.db, `messages_${facId}`));
-                const querySnapshot = await window.getDocs(q);
-                allMessages[facId] = [];
-                querySnapshot.forEach((doc) => {
-                    allMessages[facId].push(doc.data());
-                });
-            } catch (error) {
-                console.error("Erro ao carregar mensagens:", error);
-                allMessages[facId] = allMessages[facId] || [];
-            }
-        }
-
-        function save() {
-            localStorage.setItem('faczap_facs', JSON.stringify(facs));
-            localStorage.setItem('faczap_messages', JSON.stringify(allMessages));
-            if (currentUser) localStorage.setItem('faczap_user', JSON.stringify(currentUser));
-        }
-
-        async function login() {
-            const nick = document.getElementById('nickname').value.trim();
-            if (!nick) return;
-
-            currentUser = JSON.parse(localStorage.getItem('faczap_user')) || { nickname: nick, avatar: 'https://i.pravatar.cc/128?img=47' };
-            if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
-            localStorage.setItem('faczap_user', JSON.stringify(currentUser));
-
-            await loadFacsFromFirebase();
-
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('current-user').innerText = '@' + currentUser.nickname;
-            document.getElementById('header-avatar').src = currentUser.avatar;
-            renderChatList();
-            renderOtherFacs();
-        }
-
-        function logout() { localStorage.removeItem('faczap_user'); location.reload(); }
-
-        function editProfile() {
-            document.getElementById('profile-modal').classList.remove('hidden');
-            document.getElementById('profile-modal').classList.add('flex');
-            document.getElementById('profile-avatar').src = currentUser.avatar;
-        }
-
-        function hideProfileModal() {
-            document.getElementById('profile-modal').classList.remove('flex');
-            document.getElementById('profile-modal').classList.add('hidden');
-        }
-
-        function uploadAvatar(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                currentUser.avatar = ev.target.result;
-                document.getElementById('profile-avatar').src = currentUser.avatar;
-                document.getElementById('header-avatar').src = currentUser.avatar;
-                save();
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function previewFacPhoto(e) {
-            const file = e.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = function(ev) {
-                pendingFacPhoto = ev.target.result;
-                document.getElementById('fac-preview').src = pendingFacPhoto;
-            };
-            reader.readAsDataURL(file);
         }
 
         async function createFac() {
-            try {
-                const nameInput = document.getElementById('fac-name');
-                const name = nameInput ? nameInput.value.trim() : '';
+            const name = document.getElementById('fac-name').value.trim();
+            if (!name || !currentUser) return;
 
-                if (!name) {
-                    alert("Nome da fac é obrigatório");
-                    return;
-                }
-
-                // Verifica duplicado de forma segura
-                const nameExists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
-                if (nameExists) {
-                    alert('Já existe uma fac com esse nome!');
-                    return;
-                }
-
-                const newFac = {
-                    id: Date.now(),
-                    name: name,
-                    leader: currentUser ? currentUser.nickname : 'Desconhecido',
-                    members: currentUser ? [currentUser.nickname] : [],
-                    photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
-                };
-
-                // Tenta salvar no Firebase
-                try {
-                    const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
-                    newFac.firestoreId = docRef.id;
-                } catch (fbError) {
-                    console.warn("Não foi possível salvar no Firebase (usando apenas local):", fbError);
-                }
-
-                facs.push(newFac);
-                allMessages[newFac.id] = [];
-                save();
-
-                hideCreateModal();
-                renderChatList();
-                renderOtherFacs();
-
-                setTimeout(() => {
-                    openChat(newFac.id);
-                }, 150);
-
-            } catch (error) {
-                console.error("Erro ao criar fac:", error);
-                alert("Ocorreu um erro ao criar a fac. Tente novamente.");
+            const nameExists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
+            if (nameExists) {
+                return alert('Já existe uma fac com esse nome!');
             }
+
+            const newFac = {
+                id: Date.now(),
+                name: name,
+                leader: currentUser.nickname,
+                members: [currentUser.nickname],
+                photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
+            };
+
+            try {
+                const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
+                newFac.firestoreId = docRef.id;
+            } catch (error) {
+                console.error("Erro ao salvar fac:", error);
+            }
+
+            facs.push(newFac);
+            allMessages[newFac.id] = [];
+            hideCreateModal();
+            renderChatList();
+            renderOtherFacs();
+            setTimeout(() => openChat(newFac.id), 150);
+        }
+
+        function showCreateFac() {
+            pendingFacPhoto = null;
+            document.getElementById('fac-preview').src = 'https://picsum.photos/id/1011/80/80';
+            document.getElementById('create-modal').classList.remove('hidden');
+            document.getElementById('create-modal').classList.add('flex');
+        }
+
+        function hideCreateModal() {
+            document.getElementById('create-modal').classList.remove('flex');
+            document.getElementById('create-modal').classList.add('hidden');
         }
 
         function joinFac(facId) {
@@ -313,7 +309,6 @@
             if (!fac) return;
             if (!fac.members.includes(currentUser.nickname)) {
                 fac.members.push(currentUser.nickname);
-                save();
             }
             renderChatList();
             renderOtherFacs();
@@ -327,47 +322,35 @@
 
             if (confirm(`Sair da fac ${fac.name}?`)) {
                 fac.members = fac.members.filter(m => m !== currentUser.nickname);
-                save();
                 backToList();
             }
         }
 
         function changeFacPhoto() {
             const fac = facs.find(f => f.id === currentChatId);
-            if (!fac || fac.leader !== currentUser.nickname) {
-                alert('Só o líder da fac pode mudar a foto.');
-                return;
-            }
+            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode mudar a foto.');
 
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
-            input.onchange = function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
+            input.onchange = e => {
                 const reader = new FileReader();
-                reader.onload = function(ev) {
+                reader.onload = ev => {
                     fac.photo = ev.target.result;
-                    save();
                     document.getElementById('chat-avatar').src = fac.photo;
                     renderChatList();
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(e.target.files[0]);
             };
             input.click();
         }
 
         function deleteFac() {
             const fac = facs.find(f => f.id === currentChatId);
-            if (!fac || fac.leader !== currentUser.nickname) {
-                alert('Só o líder pode apagar a fac.');
-                return;
-            }
+            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode apagar.');
 
-            if (confirm(`Tem certeza que quer APAGAR a fac ${fac.name}? Isso não pode ser desfeito.`)) {
+            if (confirm(`Apagar a fac ${fac.name}?`)) {
                 facs = facs.filter(f => f.id !== currentChatId);
-                delete allMessages[currentChatId];
-                save();
                 backToList();
             }
         }
@@ -393,11 +376,8 @@
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
 
-            await loadMessagesFromFirebase(facId);
-
             const changeBtn = document.getElementById('change-fac-photo-btn');
             const deleteBtn = document.getElementById('delete-fac-btn');
-
             if (changeBtn) changeBtn.style.display = (fac.leader === currentUser.nickname) ? 'block' : 'none';
             if (deleteBtn) deleteBtn.style.display = (fac.leader === currentUser.nickname) ? 'block' : 'none';
 
@@ -414,8 +394,8 @@
                     div.className = `px-3 py-3 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center gap-x-3`;
                     div.innerHTML = `
                         <img src="${fac.photo || 'https://picsum.photos/id/1011/80/80'}" class="w-9 h-9 rounded-2xl object-cover border border-zinc-700">
-                        <div class="flex-1 min-w-0">
-                            <div class="font-semibold truncate">${fac.name}</div>
+                        <div>
+                            <div class="font-semibold">${fac.name}</div>
                             <div class="text-xs text-zinc-500">${fac.members.length} membros</div>
                         </div>
                     `;
@@ -429,55 +409,39 @@
             const container = document.getElementById('other-facs-list');
             container.innerHTML = '';
 
-            let hasOther = false;
             facs.forEach(fac => {
                 if (fac.members && !fac.members.includes(currentUser.nickname)) {
-                    hasOther = true;
                     const div = document.createElement('div');
-                    div.className = 'px-3 py-2 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center justify-between text-sm';
+                    div.className = 'px-3 py-2 hover:bg-zinc-800 rounded-2xl flex items-center justify-between text-sm cursor-pointer';
                     div.innerHTML = `
                         <div class="flex items-center gap-x-2">
-                            <img src="${fac.photo || 'https://picsum.photos/id/1011/80/80'}" class="w-7 h-7 rounded-xl object-cover">
+                            <img src="${fac.photo || 'https://picsum.photos/id/1011/80/80'}" class="w-7 h-7 rounded-xl">
                             <span>${fac.name}</span>
                         </div>
                         <button class="text-xs bg-green-600 px-2 py-0.5 rounded">Entrar</button>
                     `;
-                    div.querySelector('button').onclick = (e) => { e.stopImmediatePropagation(); joinFac(fac.id); };
+                    div.querySelector('button').onclick = e => { e.stopImmediatePropagation(); joinFac(fac.id); };
                     container.appendChild(div);
                 }
             });
-
-            if (!hasOther) container.innerHTML = `<div class="text-xs text-zinc-500 px-3">Nenhuma outra fac disponível</div>`;
         }
 
         function renderMessages() {
             const container = document.getElementById('messages');
             container.innerHTML = '';
             const msgs = allMessages[currentChatId] || [];
-
             msgs.forEach(msg => {
                 const isMe = msg.from === currentUser.nickname;
                 const div = document.createElement('div');
-                div.className = `flex items-end gap-x-2 ${isMe ? 'justify-end' : 'justify-start'}`;
-
-                let html = '';
-                if (!isMe) {
-                    html += `<img src="${currentUser.avatar}" class="w-7 h-7 rounded-full object-cover flex-shrink-0">`;
-                }
-
-                html += `
+                div.className = `flex ${isMe ? 'justify-end' : 'justify-start'} items-end gap-x-2`;
+                div.innerHTML = `
+                    ${!isMe ? `<img src="https://i.pravatar.cc/28" class="w-7 h-7 rounded-full">` : ''}
                     <div class="max-w-[70%]">
                         ${!isMe ? `<div class="text-xs text-zinc-400 mb-0.5 ml-1">@${msg.from}</div>` : ''}
                         <div class="message-bubble ${isMe ? 'my-message' : 'other-message'}">${msg.text}</div>
-                        <div class="text-[10px] opacity-60 mt-0.5 ${isMe ? 'text-right pr-1' : 'pl-1'}">${new Date(msg.time).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
                     </div>
+                    ${isMe ? `<img src="https://i.pravatar.cc/28" class="w-7 h-7 rounded-full">` : ''}
                 `;
-
-                if (isMe) {
-                    html += `<img src="${currentUser.avatar}" class="w-7 h-7 rounded-full object-cover flex-shrink-0">`;
-                }
-
-                div.innerHTML = html;
                 container.appendChild(div);
             });
             container.scrollTop = container.scrollHeight;
@@ -487,60 +451,46 @@
             const input = document.getElementById('msg-input');
             if (!input.value.trim() || !currentChatId) return;
 
-            if (!allMessages[currentChatId]) allMessages[currentChatId] = [];
-
-            const messageData = {
+            const msgData = {
                 from: currentUser.nickname,
                 text: input.value.trim(),
                 time: new Date().toISOString()
             };
 
-            allMessages[currentChatId].push(messageData);
+            if (!allMessages[currentChatId]) allMessages[currentChatId] = [];
+            allMessages[currentChatId].push(msgData);
 
             try {
-                await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), messageData);
-            } catch (error) {
-                console.error("Erro ao salvar mensagem:", error);
-            }
+                await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), msgData);
+            } catch(e) { console.error(e); }
 
-            save();
             input.value = '';
             renderMessages();
         }
 
         function declareWar() {
             if (!currentChatId) return;
-            const fac = facs.find(f => f.id === currentChatId);
-            const text = prompt('Mensagem de guerra:', `A ${fac.name} declara guerra!`);
+            const text = prompt("Mensagem de guerra:");
             if (!text) return;
 
-            allMessages[currentChatId].push({
-                from: currentUser.nickname,
-                text: `⚔️ ${text}`,
-                time: new Date().toISOString()
-            });
-            save();
+            const msgData = { from: currentUser.nickname, text: `⚔️ ${text}`, time: new Date().toISOString() };
+            allMessages[currentChatId].push(msgData);
             renderMessages();
         }
 
-        async function checkLogin() {
-            const user = localStorage.getItem('faczap_user');
-            if (user) {
-                currentUser = JSON.parse(user);
-                if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
-
-                await loadFacsFromFirebase();
-
-                document.getElementById('login-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                document.getElementById('current-user').innerText = '@' + currentUser.nickname;
-                document.getElementById('header-avatar').src = currentUser.avatar;
-                renderChatList();
-                renderOtherFacs();
+        window.onload = () => {
+            const saved = localStorage.getItem('faczap_user');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                loadFacsFromFirebase().then(() => {
+                    document.getElementById('auth-screen').classList.add('hidden');
+                    document.getElementById('main-app').classList.remove('hidden');
+                    document.getElementById('current-user').innerText = '@' + currentUser.nickname;
+                    renderChatList();
+                    renderOtherFacs();
+                });
             }
-        }
-
-        window.onload = checkLogin;
+        };
     </script>
 </body>
 </html>
