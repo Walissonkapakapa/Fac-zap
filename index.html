@@ -136,7 +136,7 @@
     <!-- Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDg5pqfwpO12boJpyZuJI0L-WCIrfttMFs",
@@ -150,9 +150,11 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Disponibiliza o db globalmente
         window.db = db;
-        console.log("Firebase inicializado com sucesso");
+        window.addDoc = addDoc;
+        window.collection = collection;
+
+        console.log("Firebase inicializado");
     </script>
 
     <script>
@@ -221,19 +223,7 @@
             reader.readAsDataURL(file);
         }
 
-        function showCreateFac() {
-            pendingFacPhoto = null;
-            document.getElementById('fac-preview').src = 'https://picsum.photos/id/1011/80/80';
-            document.getElementById('create-modal').classList.remove('hidden');
-            document.getElementById('create-modal').classList.add('flex');
-        }
-
-        function hideCreateModal() {
-            document.getElementById('create-modal').classList.remove('flex');
-            document.getElementById('create-modal').classList.add('hidden');
-        }
-
-        function createFac() {
+        async function createFac() {
             const name = document.getElementById('fac-name').value.trim();
             if (!name) return;
 
@@ -250,6 +240,16 @@
                 members: [currentUser.nickname],
                 photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
             };
+
+            // Salva no Firestore
+            try {
+                const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
+                newFac.firestoreId = docRef.id;
+                console.log("Fac salva no Firebase com ID:", docRef.id);
+            } catch (error) {
+                console.error("Erro ao salvar fac no Firebase:", error);
+            }
+
             facs.push(newFac);
             allMessages[newFac.id] = [];
             save();
