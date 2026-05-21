@@ -45,7 +45,7 @@
 
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar -->
-            <div id="sidebar" class="w-80 border-r border-zinc-800 flex flex-col">
+            <div id="sidebar" class="w-80 border-r border-zinc-800 flex flex-col transition-all">
                 <div class="p-3 border-b border-zinc-800">
                     <input type="text" placeholder="Buscar..." class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2 text-sm">
                 </div>
@@ -66,14 +66,14 @@
                 </div>
             </div>
 
-            <!-- Chat Area (tela cheia quando aberto) -->
+            <!-- Chat Area -->
             <div class="flex-1 flex flex-col">
                 <div id="empty-state" class="flex-1 flex items-center justify-center text-zinc-500">
                     Selecione ou entre em uma fac
                 </div>
 
                 <div id="chat-window" class="hidden flex-1 flex flex-col">
-                    <!-- Header com botão voltar -->
+                    <!-- Header com voltar -->
                     <div class="px-4 py-2.5 border-b border-zinc-800 flex items-center gap-x-3 bg-[#18181b]">
                         <button onclick="backToList()" class="text-xl px-2 text-zinc-400 hover:text-white">
                             <i class="fa-solid fa-arrow-left"></i>
@@ -197,9 +197,11 @@
 
         function openChat(facId) {
             currentChatId = facId;
+
+            // Esconde sidebar completamente para tela cheia
+            document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('chat-window').classList.remove('hidden');
-            document.getElementById('sidebar').classList.add('hidden'); // Esconde sidebar para tela cheia
 
             const fac = facs.find(f => f.id === facId);
             document.getElementById('chat-name').innerText = fac.name;
@@ -215,7 +217,7 @@
             facs.forEach(fac => {
                 if (fac.members.includes(currentUser.nickname)) {
                     const div = document.createElement('div');
-                    div.className = `px-3 py-3 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center gap-x-3 ${currentChatId === fac.id ? 'bg-zinc-800' : ''}`;
+                    div.className = `px-3 py-3 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center gap-x-3`;
                     div.innerHTML = `
                         <div class="w-9 h-9 bg-zinc-700 rounded-2xl flex items-center justify-center">
                             <i class="fa-solid fa-users text-green-400"></i>
