@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fac Zap • As Facs Voltaram</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: 'Inter', system-ui, sans-serif; }
+        .title-font { font-family: 'Space Grotesk', system-ui, sans-serif; font-weight: 600; letter-spacing: -1px; }
+        .my-message { background-color: #22c55e; color: black; border-bottom-right-radius: 5px; }
+        .other-message { background-color: #27272a; color: #e5e5e5; border-bottom-left-radius: 5px; }
+    </style>
+</head>
+<body class="bg-zinc-950 text-white">
+    <!-- Login Screen -->
+    <div id="login-screen" class="min-h-screen flex items-center justify-center">
+        <div class="max-w-sm w-full mx-4">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-16 h-16 bg-green-600 rounded-2xl mb-4">
+                    <i class="fa-solid fa-users text-3xl text-black"></i>
+                </div>
+                <h1 class="text-5xl font-bold title-font tracking-tighter">Fac Zap</h1>
+                <p class="text-zinc-400 mt-2">As facs voltaram. Crie sua fac e entre na guerra.</p>
+            </div>
+
+            <div class="bg-zinc-900 border border-zinc-800 rounded-3xl p-6">
+                <div class="mb-4">
+                    <label class="text-xs tracking-widest text-zinc-500 block mb-1.5">SEU APELIDO</label>
+                    <input id="nickname-input" type="text" value="KrypZin" class="w-full bg-zinc-950 border border-zinc-700 focus:border-green-600 transition-colors rounded-2xl px-4 py-3 text-lg text-center">
+                </div>
+                
+                <button onclick="login()" class="w-full bg-green-600 hover:bg-green-700 transition-all py-3.5 rounded-2xl font-semibold text-lg">
+                    Entrar na guerra
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="main-app" class="hidden h-screen flex flex-col">
+        <div class="bg-zinc-900 border-b border-zinc-800 px-5 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-x-2">
+                <div class="w-8 h-8 bg-green-600 rounded-xl flex items-center justify-center">
+                    <i class="fa-solid fa-users text-black"></i>
+                </div>
+                <span class="font-bold text-2xl tracking-tighter">Fac Zap</span>
+            </div>
+            <div class="flex items-center gap-x-3">
+                <span id="user-nickname-display" class="text-sm"></span>
+                <button onclick="logout()" class="text-xs px-4 py-2 border border-zinc-700 rounded-2xl">Sair</button>
+            </div>
+        </div>
+
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar -->
+            <div class="w-72 border-r border-zinc-800 flex flex-col">
+                <div class="p-4">
+                    <button onclick="showCreateFacModal()" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-2xl font-semibold flex items-center justify-center gap-x-2">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Criar Nova Fac</span>
+                    </button>
+                </div>
+
+                <div class="px-3">
+                    <div class="text-xs uppercase tracking-widest text-zinc-500 px-3 mb-2">Conversas</div>
+                    <div id="chat-list" class="space-y-1"></div>
+                </div>
+            </div>
+
+            <!-- Chat Area -->
+            <div class="flex-1 flex flex-col">
+                <div id="no-chat-state" class="flex-1 flex items-center justify-center text-zinc-500">
+                    Selecione uma conversa ou crie uma Fac
+                </div>
+
+                <div id="active-chat" class="hidden flex-1 flex flex-col">
+                    <div class="px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
+                        <div id="chat-header"></div>
+                        <button onclick="declareWar()" class="bg-red-600 px-4 py-2 rounded-2xl text-sm flex items-center gap-x-2">
+                            <i class="fa-solid fa-bomb"></i>
+                            <span>Declarar Guerra</span>
+                        </button>
+                    </div>
+
+                    <div id="messages" class="flex-1 p-5 overflow-auto bg-[#111111] space-y-4"></div>
+
+                    <div class="p-4 border-t border-zinc-800">
+                        <div class="flex gap-x-2">
+                            <input id="message-input" type="text" placeholder="Escreva uma mensagem..." class="flex-1 bg-zinc-950 border border-zinc-700 rounded-3xl px-5 py-3" onkeypress="if(event.key === 'Enter') sendMessage()">
+                            <button onclick="sendMessage()" class="bg-green-600 w-11 h-11 rounded-3xl flex items-center justify-center">
+                                <i class="fa-solid fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Create Fac Modal -->
+    <div id="create-fac-modal" onclick="if (event.target.id === 'create-fac-modal') hideCreateFacModal()" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
+        <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 border border-zinc-700 w-full max-w-md mx-4 rounded-3xl p-6">
+            <h3 class="text-xl font-semibold mb-5">Criar Nova Fac</h3>
+            <input id="fac-name-input" type="text" value="KRYPTON" class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-3">
+            <textarea id="fac-desc-input" placeholder="Descrição da fac..." class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-3 mb-4"></textarea>
+            <div class="flex gap-x-3">
+                <button onclick="hideCreateFacModal()" class="flex-1 py-3 rounded-2xl border border-zinc-700">Cancelar</button>
+                <button onclick="createFac()" class="flex-1 py-3 rounded-2xl bg-green-600 font-semibold">Criar Fac</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = null;
+        let facs = JSON.parse(localStorage.getItem('facZap_facs') || '[]');
+        let messages = JSON.parse(localStorage.getItem('facZap_messages') || '{}');
+        let currentChat = null;
+
+        function saveData() {
+            localStorage.setItem('facZap_facs', JSON.stringify(facs));
+            localStorage.setItem('facZap_messages', JSON.stringify(messages));
+        }
+
+        function login() {
+            const nick = document.getElementById('nickname-input').value.trim();
+            if (!nick) return alert("Coloca um apelido");
+            currentUser = { nickname: nick };
+            localStorage.setItem('facZap_user', JSON.stringify(currentUser));
+            document.getElementById('login-screen').classList.add('hidden');
+            document.getElementById('main-app').classList.remove('hidden');
+            document.getElementById('user-nickname-display').innerText = '@' + nick;
+            renderChatList();
+        }
+
+        function logout() {
+            location.reload();
+        }
+
+        function showCreateFacModal() {
+            document.getElementById('create-fac-modal').classList.remove('hidden');
+            document.getElementById('create-fac-modal').classList.add('flex');
+        }
+
+        function hideCreateFacModal() {
+            document.getElementById('create-fac-modal').classList.remove('flex');
+            document.getElementById('create-fac-modal').classList.add('hidden');
+        }
+
+        function createFac() {
+            const name = document.getElementById('fac-name-input').value.trim();
+            if (!name) return alert("Nome da fac é obrigatório");
+
+            const newFac = {
+                id: Date.now(),
+                name: name,
+                description: document.getElementById('fac-desc-input').value || "Fac criada no Fac Zap",
+                leader: currentUser.nickname,
+                members: [currentUser.nickname]
+            };
+
+            facs.push(newFac);
+            saveData();
+            hideCreateFacModal();
+            renderChatList();
+            setTimeout(() => openChat('group', newFac.id), 200);
+        }
+
+        function renderChatList() {
+            const container = document.getElementById('chat-list');
+            container.innerHTML = '';
+
+            facs.forEach(fac => {
+                if (fac.members.includes(currentUser.nickname)) {
+                    const div = document.createElement('div');
+                    div.className = 'px-3 py-3 rounded-2xl hover:bg-zinc-800 cursor-pointer flex items-center gap-x-3';
+                    div.innerHTML = `
+                        <div class="w-9 h-9 bg-zinc-700 rounded-2xl flex items-center justify-center">
+                            <i class="fa-solid fa-users text-green-400"></i>
+                        </div>
+                        <div>
+                            <div class="font-semibold">${fac.name}</div>
+                            <div class="text-xs text-zinc-500">${fac.members.length} membros</div>
+                        </div>
+                    `;
+                    div.onclick = () => openChat('group', fac.id);
+                    container.appendChild(div);
+                }
+            });
+        }
+
+        function openChat(type, id) {
+            currentChat = { type, id };
+            document.getElementById('no-chat-state').classList.add('hidden');
+            document.getElementById('active-chat').classList.remove('hidden');
+
+            const fac = facs.find(f => f.id === id);
+            if (!fac) return;
+
+            document.getElementById('chat-header').innerHTML = `
+                <div>
+                    <div class="font-bold text-lg">${fac.name}</div>
+                    <div class="text-xs text-zinc-500">${fac.members.length} membros • Grupo da Fac</div>
+                </div>
+            `;
+            renderMessages();
+        }
+
+        function renderMessages() {
+            const container = document.getElementById('messages');
+            container.innerHTML = '';
+            const chatMsgs = messages[currentChat.id] || [];
+
+            if (chatMsgs.length === 0) {
+                container.innerHTML = `<div class="text-center text-zinc-500 text-sm py-8">Nenhuma mensagem ainda.<br>Seja o primeiro a escrever.</div>`;
+                return;
+            }
+
+            chatMsgs.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `flex ${msg.author === currentUser.nickname ? 'justify-end' : ''}`;
+                div.innerHTML = `
+                    <div class="max-w-[75%]">
+                        ${msg.author !== currentUser.nickname ? `<div class="text-xs text-zinc-400 mb-1 ml-1">@${msg.author}</div>` : ''}
+                        <div class="message-bubble ${msg.author === currentUser.nickname ? 'my-message' : 'other-message'}">${msg.text}</div>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            container.scrollTop = container.scrollHeight;
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            if (!input.value.trim() || !currentChat) return;
+
+            if (!messages[currentChat.id]) messages[currentChat.id] = [];
+
+            messages[currentChat.id].push({
+                author: currentUser.nickname,
+                text: input.value.trim(),
+                timestamp: new Date().toISOString()
+            });
+
+            saveData();
+            input.value = '';
+            renderMessages();
+        }
+
+        function declareWar() {
+            if (!currentChat) return alert("Abra o grupo de uma fac primeiro");
+            const fac = facs.find(f => f.id === currentChat.id);
+            const msg = prompt("Mensagem de declaração de guerra:", `A ${fac.name} declara guerra!`);
+            if (!msg) return;
+
+            if (!messages[currentChat.id]) messages[currentChat.id] = [];
+            messages[currentChat.id].push({
+                author: currentUser.nickname,
+                text: `⚔️ ${msg}`
+            });
+            saveData();
+            renderMessages();
+        }
+
+        function checkLogin() {
+            const saved = localStorage.getItem('facZap_user');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('user-nickname-display').innerText = '@' + currentUser.nickname;
+                renderChatList();
+            }
+        }
+
+        window.onload = checkLogin;
+    </script>
+</body>
+</html>
