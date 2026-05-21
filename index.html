@@ -45,7 +45,7 @@
 
         <div class="flex flex-1 overflow-hidden">
             <!-- Sidebar -->
-            <div class="w-80 border-r border-zinc-800 flex flex-col">
+            <div id="sidebar" class="w-80 border-r border-zinc-800 flex flex-col">
                 <div class="p-3 border-b border-zinc-800">
                     <input type="text" placeholder="Buscar..." class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2 text-sm">
                 </div>
@@ -66,15 +66,19 @@
                 </div>
             </div>
 
-            <!-- Chat -->
+            <!-- Chat Area (tela cheia quando aberto) -->
             <div class="flex-1 flex flex-col">
                 <div id="empty-state" class="flex-1 flex items-center justify-center text-zinc-500">
                     Selecione ou entre em uma fac
                 </div>
 
                 <div id="chat-window" class="hidden flex-1 flex flex-col">
-                    <div class="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between bg-[#18181b]">
-                        <div class="flex items-center gap-x-3">
+                    <!-- Header com botão voltar -->
+                    <div class="px-4 py-2.5 border-b border-zinc-800 flex items-center gap-x-3 bg-[#18181b]">
+                        <button onclick="backToList()" class="text-xl px-2 text-zinc-400 hover:text-white">
+                            <i class="fa-solid fa-arrow-left"></i>
+                        </button>
+                        <div class="flex items-center gap-x-3 flex-1">
                             <div class="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center">
                                 <i class="fa-solid fa-users text-green-400"></i>
                             </div>
@@ -179,12 +183,29 @@
             if (confirm(`Sair da fac ${fac.name}?`)) {
                 fac.members = fac.members.filter(m => m !== currentUser.nickname);
                 save();
-                currentChatId = null;
-                document.getElementById('chat-window').classList.add('hidden');
-                document.getElementById('empty-state').classList.remove('hidden');
-                renderChatList();
-                renderOtherFacs();
+                backToList();
             }
+        }
+
+        function backToList() {
+            currentChatId = null;
+            document.getElementById('chat-window').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('sidebar').classList.remove('hidden');
+            renderChatList();
+        }
+
+        function openChat(facId) {
+            currentChatId = facId;
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('chat-window').classList.remove('hidden');
+            document.getElementById('sidebar').classList.add('hidden'); // Esconde sidebar para tela cheia
+
+            const fac = facs.find(f => f.id === facId);
+            document.getElementById('chat-name').innerText = fac.name;
+            document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
+
+            renderMessages();
         }
 
         function renderChatList() {
@@ -235,19 +256,6 @@
             if (!hasOther) {
                 container.innerHTML = `<div class="text-xs text-zinc-500 px-3">Nenhuma outra fac disponível</div>`;
             }
-        }
-
-        function openChat(facId) {
-            currentChatId = facId;
-            document.getElementById('empty-state').classList.add('hidden');
-            document.getElementById('chat-window').classList.remove('hidden');
-
-            const fac = facs.find(f => f.id === facId);
-            document.getElementById('chat-name').innerText = fac.name;
-            document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
-
-            renderMessages();
-            renderChatList();
         }
 
         function renderMessages() {
