@@ -86,6 +86,7 @@
                         </div>
                         <div class="flex items-center gap-x-4">
                             <button id="change-fac-photo-btn" onclick="changeFacPhoto()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl hidden">Mudar Foto</button>
+                            <button id="delete-fac-btn" onclick="deleteFac()" class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded-xl hidden">Apagar Fac</button>
                             <button onclick="leaveFac()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-red-600 rounded-xl">Sair</button>
                             <button onclick="declareWar()" class="text-red-500"><i class="fa-solid fa-bomb"></i></button>
                         </div>
@@ -149,7 +150,6 @@
             const nick = document.getElementById('nickname').value.trim();
             if (!nick) return;
 
-            // Evitar nomes duplicados (básico)
             const existingUsers = Object.keys(localStorage).filter(k => k.startsWith('faczap_user_'));
             for (let key of existingUsers) {
                 const u = JSON.parse(localStorage.getItem(key));
@@ -224,7 +224,6 @@
             const name = document.getElementById('fac-name').value.trim();
             if (!name) return;
 
-            // Evitar nomes duplicados de fac
             const nameExists = facs.some(f => f.name.toLowerCase() === name.toLowerCase());
             if (nameExists) {
                 alert('Já existe uma fac com esse nome!');
@@ -296,6 +295,21 @@
             input.click();
         }
 
+        function deleteFac() {
+            const fac = facs.find(f => f.id === currentChatId);
+            if (!fac || fac.leader !== currentUser.nickname) {
+                alert('Só o líder pode apagar a fac.');
+                return;
+            }
+
+            if (confirm(`Tem certeza que quer APAGAR a fac ${fac.name}? Isso não pode ser desfeito.`)) {
+                facs = facs.filter(f => f.id !== currentChatId);
+                delete allMessages[currentChatId];
+                save();
+                backToList();
+            }
+        }
+
         function backToList() {
             currentChatId = null;
             document.getElementById('chat-window').classList.add('hidden');
@@ -315,11 +329,11 @@
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
 
-            // Mostrar botão de mudar foto só para o líder
             const changeBtn = document.getElementById('change-fac-photo-btn');
-            if (changeBtn) {
-                changeBtn.style.display = (fac.leader === currentUser.nickname) ? 'block' : 'none';
-            }
+            const deleteBtn = document.getElementById('delete-fac-btn');
+
+            if (changeBtn) changeBtn.style.display = (fac.leader === currentUser.nickname) ? 'block' : 'none';
+            if (deleteBtn) deleteBtn.style.display = (fac.leader === currentUser.nickname) ? 'block' : 'none';
 
             renderMessages();
         }
