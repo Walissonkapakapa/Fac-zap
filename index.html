@@ -10,6 +10,7 @@
         .message-bubble { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; }
         .my-message { background-color: #22c55e; color: black; border-bottom-right-radius: 2px; }
         .other-message { background-color: #27272a; color: #e5e5e5; border-bottom-left-radius: 2px; }
+        #messages { scroll-behavior: smooth; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
@@ -179,6 +180,13 @@
         let pendingFacPhoto = null;
         let unsubscribeMessages = null;
 
+        function scrollToBottom() {
+            const messagesContainer = document.getElementById('messages');
+            if (messagesContainer) {
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
+
         async function loadFacsFromFirebase() {
             try {
                 const q = window.query(window.collection(window.db, "facs"));
@@ -199,7 +207,10 @@
             unsubscribeMessages = window.onSnapshot(q, (snapshot) => {
                 allMessages[facId] = [];
                 snapshot.forEach(doc => allMessages[facId].push(doc.data()));
-                if (currentChatId === facId) renderMessages();
+                if (currentChatId === facId) {
+                    renderMessages();
+                    setTimeout(scrollToBottom, 50);
+                }
             });
         }
 
@@ -244,7 +255,6 @@
                 const userDoc = snap.docs[0].data();
                 currentUser = { nickname: nick, photo: userDoc.photo || null };
 
-                // Salva login para não precisar logar toda hora
                 localStorage.setItem('faczap_user', JSON.stringify(currentUser));
 
                 await loadFacsFromFirebase();
@@ -462,6 +472,7 @@
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
 
             startMessageListener(facId);
+            setTimeout(scrollToBottom, 100);
         }
 
         function renderChatList() {
@@ -517,7 +528,6 @@
                     </div>`;
                 c.appendChild(d);
             });
-            c.scrollTop = c.scrollHeight;
         }
 
         async function sendMessage() {
@@ -535,6 +545,7 @@
             } catch(e){}
 
             input.value = '';
+            // O scroll vai acontecer automaticamente via listener
         }
 
         function declareWar() {
@@ -546,7 +557,6 @@
         }
 
         window.onload = async () => {
-            // Tenta carregar login salvo
             const savedUser = localStorage.getItem('faczap_user');
             if (savedUser) {
                 currentUser = JSON.parse(savedUser);
