@@ -131,7 +131,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, updateDoc, doc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
         const firebaseConfig = { /* cole seu config aqui */ };
 
@@ -145,7 +145,6 @@
         window.query = query;
         window.updateDoc = updateDoc;
         window.doc = doc;
-        window.onSnapshot = onSnapshot;
     </script>
 
     <script>
@@ -154,7 +153,6 @@
         let allMessages = {};
         let currentChatId = null;
         let pendingFacPhoto = null;
-        let unsubscribe = null;
 
         async function loadFacsFromFirebase() {
             try {
@@ -166,36 +164,43 @@
                     data.firestoreId = d.id;
                     facs.push(data);
                 });
-            } catch(e){ console.error(e); }
+            } catch(e){ console.error("Erro ao carregar facs:", e); }
         }
 
         async function createFac() {
-            const name = document.getElementById('fac-name').value.trim();
-            if (!name || !currentUser) return alert("Nome obrigatório");
-
-            const exists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
-            if (exists) return alert("Já existe uma fac com esse nome");
-
-            const newFac = {
-                id: Date.now(),
-                name: name,
-                leader: currentUser.nickname,
-                members: [currentUser.nickname],
-                photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
-            };
-
             try {
-                const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
-                newFac.firestoreId = docRef.id;
+                const name = document.getElementById('fac-name').value.trim();
+                if (!name) return alert("Digite um nome para a fac");
+                if (!currentUser) return alert("Faça login primeiro");
+
+                const exists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
+                if (exists) return alert("Já existe uma fac com esse nome");
+
+                const newFac = {
+                    id: Date.now(),
+                    name: name,
+                    leader: currentUser.nickname,
+                    members: [currentUser.nickname],
+                    photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
+                };
+
+                // Tenta salvar no Firebase
+                try {
+                    const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
+                    newFac.firestoreId = docRef.id;
+                } catch (fbError) {
+                    console.warn("Não salvou no Firebase, usando apenas local:", fbError);
+                }
 
                 facs.push(newFac);
                 hideCreateModal();
                 renderChatList();
                 renderOtherFacs();
                 setTimeout(() => openChat(newFac.id), 100);
+
             } catch (error) {
                 console.error("Erro ao criar fac:", error);
-                alert("Erro ao criar fac. Tente novamente.");
+                alert("Ocorreu um erro ao criar a fac. Veja o console.");
             }
         }
 
@@ -211,7 +216,7 @@
                         await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), {
                             members: fac.members
                         });
-                    } catch(e){ console.error(e); }
+                    } catch(e){}
                 }
             }
             renderChatList();
@@ -225,10 +230,6 @@
             if (!fac) return;
 
             fac.members = fac.members.filter(m => m !== currentUser.nickname);
-
-            if (fac.firestoreId) {
-                window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
-            }
             backToList();
         }
 
@@ -243,7 +244,6 @@
         }
 
         function backToList() {
-            if (unsubscribe) { unsubscribe(); unsubscribe = null; }
             currentChatId = null;
             document.getElementById('chat-window').classList.add('hidden');
             document.getElementById('empty-state').classList.remove('hidden');
@@ -252,9 +252,7 @@
         }
 
         async function openChat(facId) {
-            if (unsubscribe) { unsubscribe(); unsubscribe = null; }
             currentChatId = facId;
-
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('chat-window').classList.remove('hidden');
@@ -266,7 +264,6 @@
             document.getElementById('chat-info').innerText = `${fac.members.length} membros`;
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
 
-            // Carrega mensagens
             try {
                 const q = window.query(window.collection(window.db, `messages_${facId}`));
                 const snap = await window.getDocs(q);
