@@ -199,7 +199,9 @@
             unsubscribeMessages = window.onSnapshot(q, (snapshot) => {
                 allMessages[facId] = [];
                 snapshot.forEach(doc => allMessages[facId].push(doc.data()));
-                if (currentChatId === facId) renderMessages();
+                if (currentChatId === facId) {
+                    renderMessages();
+                }
             });
         }
 
@@ -242,10 +244,7 @@
                 if (snap.empty) return alert("Apelido ou senha incorretos");
 
                 const userDoc = snap.docs[0].data();
-                currentUser = { 
-                    nickname: nick, 
-                    photo: userDoc.photo || null 
-                };
+                currentUser = { nickname: nick, photo: userDoc.photo || null };
 
                 await loadFacsFromFirebase();
 
@@ -289,13 +288,7 @@
         function editProfile() {
             const modal = document.getElementById('profile-modal');
             const avatar = document.getElementById('profile-avatar');
-            
-            if (currentUser && currentUser.photo) {
-                avatar.src = currentUser.photo;
-            } else {
-                avatar.src = 'https://i.pravatar.cc/80';
-            }
-            
+            avatar.src = currentUser?.photo || 'https://i.pravatar.cc/80';
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -314,20 +307,15 @@
                 const photoData = ev.target.result;
                 currentUser.photo = photoData;
 
-                // Atualiza no Firebase
                 try {
                     const usersRef = window.collection(window.db, "users");
                     const q = window.query(usersRef, window.where("nickname", "==", currentUser.nickname));
                     const snap = await window.getDocs(q);
-                    
                     if (!snap.empty) {
-                        const userDocId = snap.docs[0].id;
-                        await window.updateDoc(window.doc(window.db, "users", userDocId), {
-                            photo: photoData
-                        });
+                        await window.updateDoc(window.doc(window.db, "users", snap.docs[0].id), { photo: photoData });
                     }
                 } catch (error) {
-                    console.error("Erro ao salvar foto do perfil:", error);
+                    console.error(error);
                 }
 
                 document.getElementById('profile-avatar').src = photoData;
@@ -361,7 +349,7 @@
                 renderOtherFacs();
                 setTimeout(() => openChat(newFac.id), 100);
             } catch (error) {
-                console.error("Erro ao criar fac:", error);
+                console.error(error);
                 alert("Erro ao criar fac");
             }
         }
@@ -384,12 +372,9 @@
 
             if (!fac.members.includes(currentUser.nickname)) {
                 fac.members.push(currentUser.nickname);
-
                 if (fac.firestoreId) {
                     try {
-                        await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), {
-                            members: fac.members
-                        });
+                        await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
                     } catch(e){}
                 }
             }
@@ -404,7 +389,6 @@
             if (!fac) return;
 
             fac.members = fac.members.filter(m => m !== currentUser.nickname);
-
             if (fac.firestoreId) {
                 window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
             }
@@ -413,7 +397,7 @@
 
         async function changeFacPhoto() {
             const fac = facs.find(f => f.id === currentChatId);
-            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode mudar a foto da fac.');
+            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode mudar a foto.');
 
             const input = document.createElement('input');
             input.type = 'file';
@@ -429,9 +413,7 @@
 
                     if (fac.firestoreId) {
                         try {
-                            await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), {
-                                photo: photoData
-                            });
+                            await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { photo: photoData });
                         } catch(e){}
                     }
 
@@ -540,16 +522,18 @@
             const input = document.getElementById('msg-input');
             if (!input.value.trim() || !currentChatId) return;
 
-            const data = { from: currentUser.nickname, text: input.value.trim(), time: new Date().toISOString() };
-            if (!allMessages[currentChatId]) allMessages[currentChatId] = [];
-            allMessages[currentChatId].push(data);
+            const data = {
+                from: currentUser.nickname,
+                text: input.value.trim(),
+                time: new Date().toISOString()
+            };
 
+            // Salva no Firestore (o listener vai atualizar a tela automaticamente)
             try {
                 await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), data);
             } catch(e){}
 
             input.value = '';
-            renderMessages();
         }
 
         function declareWar() {
@@ -557,13 +541,10 @@
             const t = prompt("Mensagem de guerra:");
             if (!t) return;
             const data = { from: currentUser.nickname, text: `⚔️ ${t}` };
-            allMessages[currentChatId].push(data);
-            renderMessages();
+            window.addDoc(window.collection(window.db, `messages_${currentChatId}`), data);
         }
 
-        window.onload = () => {
-            // Nada é carregado automaticamente
-        };
+        window.onload = () => {};
     </script>
 </body>
 </html>
