@@ -199,9 +199,7 @@
             unsubscribeMessages = window.onSnapshot(q, (snapshot) => {
                 allMessages[facId] = [];
                 snapshot.forEach(doc => allMessages[facId].push(doc.data()));
-                if (currentChatId === facId) {
-                    renderMessages();
-                }
+                if (currentChatId === facId) renderMessages();
             });
         }
 
@@ -246,6 +244,9 @@
                 const userDoc = snap.docs[0].data();
                 currentUser = { nickname: nick, photo: userDoc.photo || null };
 
+                // Salva login para não precisar logar toda hora
+                localStorage.setItem('faczap_user', JSON.stringify(currentUser));
+
                 await loadFacsFromFirebase();
 
                 document.getElementById('auth-screen').classList.add('hidden');
@@ -271,6 +272,7 @@
 
         function logout() {
             stopMessageListener();
+            localStorage.removeItem('faczap_user');
             currentUser = null;
             location.reload();
         }
@@ -528,7 +530,6 @@
                 time: new Date().toISOString()
             };
 
-            // Salva no Firestore (o listener vai atualizar a tela automaticamente)
             try {
                 await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), data);
             } catch(e){}
@@ -544,7 +545,21 @@
             window.addDoc(window.collection(window.db, `messages_${currentChatId}`), data);
         }
 
-        window.onload = () => {};
+        window.onload = async () => {
+            // Tenta carregar login salvo
+            const savedUser = localStorage.getItem('faczap_user');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                await loadFacsFromFirebase();
+
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('current-user').innerText = '@' + currentUser.nickname;
+                updateHeaderAvatar();
+                renderChatList();
+                renderOtherFacs();
+            }
+        };
     </script>
 </body>
 </html>
