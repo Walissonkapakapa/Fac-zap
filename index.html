@@ -11,7 +11,7 @@
         .my-message { background-color: #22c55e; color: black; border-bottom-right-radius: 2px; }
         .other-message { background-color: #27272a; color: #e5e5e5; border-bottom-left-radius: 2px; }
         #messages { scroll-behavior: smooth; }
-        .chat-image { max-width: 220px; max-height: 220px; border-radius: 12px; object-fit: cover; }
+        .chat-image { max-width: 220px; max-height: 220px; border-radius: 12px; object-fit: cover; display: block; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
@@ -111,7 +111,7 @@
                     <div class="p-3 border-t border-zinc-800 bg-zinc-900 flex items-center gap-x-2">
                         <label class="cursor-pointer">
                             <i class="fa-regular fa-image text-xl text-zinc-400"></i>
-                            <input type="file" accept="image/*" class="hidden" onchange="sendImage(event)">
+                            <input type="file" accept="image/*" class="hidden" id="image-input" onchange="sendImage(event)">
                         </label>
                         <input id="msg-input" type="text" placeholder="Mensagem" class="flex-1 bg-zinc-950 border border-zinc-700 rounded-3xl px-4 py-2.5 text-sm" onkeypress="if(event.key === 'Enter') sendMessage()">
                         <button onclick="sendMessage()" class="text-green-500 px-3"><i class="fa-solid fa-paper-plane text-xl"></i></button>
@@ -276,11 +276,7 @@
 
         function updateHeaderAvatar() {
             const avatar = document.getElementById('header-avatar');
-            if (currentUser && currentUser.photo) {
-                avatar.src = currentUser.photo;
-            } else {
-                avatar.src = 'https://i.pravatar.cc/32';
-            }
+            avatar.src = currentUser?.photo || 'https://i.pravatar.cc/32';
         }
 
         function logout() {
@@ -302,8 +298,7 @@
 
         function editProfile() {
             const modal = document.getElementById('profile-modal');
-            const avatar = document.getElementById('profile-avatar');
-            avatar.src = currentUser?.photo || 'https://i.pravatar.cc/80';
+            document.getElementById('profile-avatar').src = currentUser?.photo || 'https://i.pravatar.cc/80';
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -319,25 +314,16 @@
 
             const reader = new FileReader();
             reader.onload = async function(ev) {
-                const photoData = ev.target.result;
-                currentUser.photo = photoData;
-
+                currentUser.photo = ev.target.result;
                 try {
                     const usersRef = window.collection(window.db, "users");
                     const q = window.query(usersRef, window.where("nickname", "==", currentUser.nickname));
                     const snap = await window.getDocs(q);
-
                     if (!snap.empty) {
-                        const userId = snap.docs[0].id;
-                        await window.updateDoc(window.doc(window.db, "users", userId), {
-                            photo: photoData
-                        });
+                        await window.updateDoc(window.doc(window.db, "users", snap.docs[0].id), { photo: currentUser.photo });
                     }
-                } catch (error) {
-                    console.error("Erro ao salvar foto do perfil:", error);
-                }
-
-                document.getElementById('profile-avatar').src = photoData;
+                } catch(e){}
+                document.getElementById('profile-avatar').src = currentUser.photo;
                 updateHeaderAvatar();
             };
             reader.readAsDataURL(file);
@@ -362,15 +348,11 @@
                 const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
                 newFac.firestoreId = docRef.id;
                 facs.push(newFac);
-
                 hideCreateModal();
                 renderChatList();
                 renderOtherFacs();
                 setTimeout(() => openChat(newFac.id), 100);
-            } catch (error) {
-                console.error(error);
-                alert("Erro ao criar fac");
-            }
+            } catch(e){ alert("Erro ao criar fac"); }
         }
 
         function showCreateFac() {
@@ -388,16 +370,10 @@
         async function joinFac(facId) {
             const fac = facs.find(f => f.id === facId);
             if (!fac || !currentUser) return;
-
             if (!fac.members.includes(currentUser.nickname)) {
                 fac.members.push(currentUser.nickname);
-
                 if (fac.firestoreId) {
-                    try {
-                        await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), {
-                            members: fac.members
-                        });
-                    } catch(e){}
+                    try { await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members }); } catch(e){}
                 }
             }
             renderChatList();
@@ -409,43 +385,29 @@
             if (!currentChatId) return;
             const fac = facs.find(f => f.id === currentChatId);
             if (!fac) return;
-
             fac.members = fac.members.filter(m => m !== currentUser.nickname);
-
-            if (fac.firestoreId) {
-                window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
-            }
+            if (fac.firestoreId) window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
             backToList();
         }
 
         async function changeFacPhoto() {
             const fac = facs.find(f => f.id === currentChatId);
-            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode mudar a foto.');
+            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode mudar.');
 
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
-            input.onchange = async (e) => {
-                const file = e.target.files[0];
-                if (!file) return;
-
+            input.onchange = async e => {
                 const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    const photoData = ev.target.result;
-                    fac.photo = photoData;
-
+                reader.onload = async ev => {
+                    fac.photo = ev.target.result;
                     if (fac.firestoreId) {
-                        try {
-                            await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), {
-                                photo: photoData
-                            });
-                        } catch(e){}
+                        try { await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { photo: fac.photo }); } catch(e){}
                     }
-
-                    document.getElementById('chat-avatar').src = photoData;
+                    document.getElementById('chat-avatar').src = fac.photo;
                     renderChatList();
                 };
-                reader.readAsDataURL(file);
+                reader.readAsDataURL(e.target.files[0]);
             };
             input.click();
         }
@@ -453,8 +415,7 @@
         function deleteFac() {
             const fac = facs.find(f => f.id === currentChatId);
             if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode apagar.');
-
-            if (confirm(`Apagar a fac ${fac.name}?`)) {
+            if (confirm(`Apagar ${fac.name}?`)) {
                 facs = facs.filter(f => f.id !== currentChatId);
                 backToList();
             }
@@ -462,7 +423,7 @@
 
         async function clearMessages() {
             if (!currentChatId) return;
-            if (!confirm("Apagar TODAS as mensagens desta fac?")) return;
+            if (!confirm("Apagar TODAS as mensagens?")) return;
 
             try {
                 const q = window.query(window.collection(window.db, `messages_${currentChatId}`));
@@ -470,11 +431,10 @@
                 const deletions = [];
                 snap.forEach(d => deletions.push(window.deleteDoc(window.doc(window.db, `messages_${currentChatId}`, d.id))));
                 await Promise.all(deletions);
-
                 allMessages[currentChatId] = [];
                 renderMessages();
                 alert("Mensagens limpas!");
-            } catch(e){ alert("Erro ao limpar"); }
+            } catch(e){ alert("Erro"); }
         }
 
         function backToList() {
@@ -489,7 +449,6 @@
         async function openChat(facId) {
             stopMessageListener();
             currentChatId = facId;
-
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('chat-window').classList.remove('hidden');
@@ -564,7 +523,7 @@
                 html += `
                     <div class="max-w-[70%]">
                         ${!isMe ? `<div class="text-xs text-emerald-400 mb-0.5 ml-1 font-medium">@${m.from}</div>` : ''}
-                        ${m.image ? `<img src="${m.image}" class="chat-image my-1">` : ''}
+                        ${m.image ? `<img src="${m.image}" class="chat-image my-1" onerror="this.style.display='none'">` : ''}
                         ${m.text ? `<div class="message-bubble ${isMe ? 'my-message' : 'other-message'}">${m.text}</div>` : ''}
                     </div>
                 `;
@@ -607,9 +566,11 @@
 
                 try {
                     await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), data);
-                } catch(err){}
+                } catch(err){ console.error(err); }
             };
             reader.readAsDataURL(file);
+
+            // Limpa o input para poder enviar outra foto
             e.target.value = '';
         }
 
