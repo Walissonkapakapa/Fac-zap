@@ -98,7 +98,7 @@
                         </div>
                         <div class="flex items-center gap-x-4">
                             <button id="change-fac-photo-btn" onclick="changeFacPhoto()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-zinc-700 rounded-xl hidden">Mudar Foto</button>
-                            <button onclick="clearMessages()" class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded-xl">Limpar Msgs (Teste)</button>
+                            <button onclick="clearMessages()" class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded-xl">Limpar Msgs</button>
                             <button id="delete-fac-btn" onclick="deleteFac()" class="text-xs px-3 py-1 bg-red-600 hover:bg-red-700 rounded-xl hidden">Apagar Fac</button>
                             <button onclick="leaveFac()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-red-600 rounded-xl">Sair</button>
                             <button onclick="declareWar()" class="text-red-500"><i class="fa-solid fa-bomb"></i></button>
@@ -419,25 +419,18 @@
 
         async function clearMessages() {
             if (!currentChatId) return;
-            if (!confirm("Tem certeza que quer apagar TODAS as mensagens desta fac?")) return;
+            if (!confirm("Apagar TODAS as mensagens desta fac?")) return;
 
             try {
                 const q = window.query(window.collection(window.db, `messages_${currentChatId}`));
                 const snap = await window.getDocs(q);
-
                 const deletions = [];
-                snap.forEach(docSnap => {
-                    deletions.push(window.deleteDoc(window.doc(window.db, `messages_${currentChatId}`, docSnap.id)));
-                });
-
+                snap.forEach(d => deletions.push(window.deleteDoc(window.doc(window.db, `messages_${currentChatId}`, d.id))));
                 await Promise.all(deletions);
                 allMessages[currentChatId] = [];
                 renderMessages();
                 alert("Mensagens limpas!");
-            } catch (error) {
-                console.error(error);
-                alert("Erro ao limpar mensagens");
-            }
+            } catch(e){ alert("Erro ao limpar"); }
         }
 
         function backToList() {
@@ -508,17 +501,38 @@
         function renderMessages() {
             const c = document.getElementById('messages');
             c.innerHTML = '';
-            const msgs = allMessages[currentChatId] || [];
+
+            let msgs = allMessages[currentChatId] || [];
+
+            // Ordena por tempo (mais antiga primeiro)
+            msgs = msgs.sort((a, b) => new Date(a.time) - new Date(b.time));
+
             msgs.forEach(m => {
                 const isMe = m.from === currentUser.nickname;
                 const d = document.createElement('div');
                 d.className = `flex ${isMe ? 'justify-end' : ''} gap-x-2`;
-                d.innerHTML = `
-                    ${!isMe ? `<img src="https://i.pravatar.cc/28" class="w-7 h-7 rounded-full">` : ''}
-                    <div class="message-bubble ${isMe ? 'my-message' : 'other-message'}">${m.text}</div>
-                    </div>`;
+
+                let html = '';
+
+                if (!isMe) {
+                    html += `<img src="https://i.pravatar.cc/28" class="w-7 h-7 rounded-full flex-shrink-0">`;
+                }
+
+                html += `
+                    <div class="max-w-[70%]">
+                        ${!isMe ? `<div class="text-xs text-emerald-400 mb-0.5 ml-1 font-medium">@${m.from}</div>` : ''}
+                        <div class="message-bubble ${isMe ? 'my-message' : 'other-message'}">${m.text}</div>
+                    </div>
+                `;
+
+                if (isMe) {
+                    html += `<img src="https://i.pravatar.cc/28" class="w-7 h-7 rounded-full flex-shrink-0">`;
+                }
+
+                d.innerHTML = html;
                 c.appendChild(d);
             });
+
             setTimeout(scrollToBottom, 30);
         }
 
