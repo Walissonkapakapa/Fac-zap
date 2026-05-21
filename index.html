@@ -11,6 +11,7 @@
         .my-message { background-color: #22c55e; color: black; border-bottom-right-radius: 2px; }
         .other-message { background-color: #27272a; color: #e5e5e5; border-bottom-left-radius: 2px; }
         #messages { scroll-behavior: smooth; }
+        .chat-image { max-width: 220px; max-height: 220px; border-radius: 12px; object-fit: cover; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
@@ -108,7 +109,10 @@
                     <div id="messages" class="flex-1 p-5 overflow-auto bg-[#0f0f0f] space-y-3"></div>
 
                     <div class="p-3 border-t border-zinc-800 bg-zinc-900 flex items-center gap-x-2">
-                        <i class="fa-regular fa-smile text-xl text-zinc-400"></i>
+                        <label class="cursor-pointer">
+                            <i class="fa-regular fa-image text-xl text-zinc-400"></i>
+                            <input type="file" accept="image/*" class="hidden" onchange="sendImage(event)">
+                        </label>
                         <input id="msg-input" type="text" placeholder="Mensagem" class="flex-1 bg-zinc-950 border border-zinc-700 rounded-3xl px-4 py-2.5 text-sm" onkeypress="if(event.key === 'Enter') sendMessage()">
                         <button onclick="sendMessage()" class="text-green-500 px-3"><i class="fa-solid fa-paper-plane text-xl"></i></button>
                     </div>
@@ -419,7 +423,7 @@
 
         async function clearMessages() {
             if (!currentChatId) return;
-            if (!confirm("Apagar TODAS as mensagens desta fac?")) return;
+            if (!confirm("Apagar TODAS as mensagens?")) return;
 
             try {
                 const q = window.query(window.collection(window.db, `messages_${currentChatId}`));
@@ -430,7 +434,7 @@
                 allMessages[currentChatId] = [];
                 renderMessages();
                 alert("Mensagens limpas!");
-            } catch(e){ alert("Erro ao limpar"); }
+            } catch(e){ alert("Erro"); }
         }
 
         function backToList() {
@@ -503,8 +507,6 @@
             c.innerHTML = '';
 
             let msgs = allMessages[currentChatId] || [];
-
-            // Ordena por tempo (mais antiga primeiro)
             msgs = msgs.sort((a, b) => new Date(a.time) - new Date(b.time));
 
             msgs.forEach(m => {
@@ -521,7 +523,8 @@
                 html += `
                     <div class="max-w-[70%]">
                         ${!isMe ? `<div class="text-xs text-emerald-400 mb-0.5 ml-1 font-medium">@${m.from}</div>` : ''}
-                        <div class="message-bubble ${isMe ? 'my-message' : 'other-message'}">${m.text}</div>
+                        ${m.image ? `<img src="${m.image}" class="chat-image my-1">` : ''}
+                        ${m.text ? `<div class="message-bubble ${isMe ? 'my-message' : 'other-message'}">${m.text}</div>` : ''}
                     </div>
                 `;
 
@@ -545,6 +548,30 @@
                 await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), data);
             } catch(e){}
             input.value = '';
+        }
+
+        async function sendImage(e) {
+            const file = e.target.files[0];
+            if (!file || !currentChatId) return;
+
+            const reader = new FileReader();
+            reader.onload = async function(ev) {
+                const imageData = ev.target.result;
+
+                const data = {
+                    from: currentUser.nickname,
+                    image: imageData,
+                    time: new Date().toISOString()
+                };
+
+                try {
+                    await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), data);
+                } catch(err){}
+            };
+            reader.readAsDataURL(file);
+
+            // Limpa o input
+            e.target.value = '';
         }
 
         function declareWar() {
