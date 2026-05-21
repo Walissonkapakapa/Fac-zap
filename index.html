@@ -9,21 +9,25 @@
     <style>
         .message-bubble {
             max-width: 65%;
-            padding: 9px 13px;
-            border-radius: 8px;
+            padding: 8px 12px;
+            border-radius: 7.5px;
+            position: relative;
         }
         .my-message {
             background-color: #22c55e;
             color: black;
-            border-bottom-right-radius: 3px;
+            border-bottom-right-radius: 2px;
         }
         .other-message {
             background-color: #27272a;
             color: #e5e5e5;
-            border-bottom-left-radius: 3px;
+            border-bottom-left-radius: 2px;
         }
         .chat-header {
             background-color: #18181b;
+        }
+        .sidebar {
+            background-color: #111111;
         }
     </style>
 </head>
@@ -60,12 +64,19 @@
         </div>
 
         <div class="flex flex-1 overflow-hidden">
-            <!-- Sidebar -->
-            <div class="w-80 border-r border-zinc-800 flex flex-col">
-                <div class="p-4 border-b border-zinc-800">
-                    <button onclick="showCreateFac()" class="w-full bg-green-600 hover:bg-green-700 py-2.5 rounded-2xl font-semibold flex items-center justify-center gap-x-2">
+            <!-- Sidebar (WhatsApp style) -->
+            <div class="w-80 sidebar border-r border-zinc-800 flex flex-col">
+                <div class="p-3 border-b border-zinc-800">
+                    <div class="relative">
+                        <input type="text" placeholder="Buscar facs..." class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl pl-10 py-2 text-sm">
+                        <i class="fa-solid fa-search absolute left-4 top-3 text-zinc-500"></i>
+                    </div>
+                </div>
+
+                <div class="p-3">
+                    <button onclick="showCreateFac()" class="w-full flex items-center justify-center gap-x-2 bg-green-600 hover:bg-green-700 py-2 rounded-2xl font-semibold text-sm">
                         <i class="fa-solid fa-plus"></i>
-                        <span>Criar Fac</span>
+                        <span>Criar Nova Fac</span>
                     </button>
                 </div>
 
@@ -74,26 +85,27 @@
                 </div>
             </div>
 
-            <!-- Chat Window -->
+            <!-- Chat Area -->
             <div class="flex-1 flex flex-col">
                 <div id="empty-state" class="flex-1 flex items-center justify-center text-zinc-500">
-                    Selecione uma fac
+                    Selecione uma fac para começar
                 </div>
 
                 <div id="chat-window" class="hidden flex-1 flex flex-col">
-                    <!-- Header estilo WhatsApp -->
-                    <div class="chat-header px-5 py-3 border-b border-zinc-800 flex items-center justify-between">
+                    <!-- Chat Header (WhatsApp style) -->
+                    <div class="chat-header px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between">
                         <div class="flex items-center gap-x-3">
                             <div class="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center">
                                 <i class="fa-solid fa-users text-green-400"></i>
                             </div>
                             <div>
                                 <div id="chat-name" class="font-semibold"></div>
-                                <div id="chat-info" class="text-xs text-zinc-500"></div>
+                                <div id="chat-info" class="text-xs text-emerald-400"></div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-x-4 text-lg text-zinc-400">
+                        <div class="flex items-center gap-x-5 text-lg text-zinc-400">
                             <i class="fa-solid fa-video cursor-pointer hover:text-white"></i>
+                            <i class="fa-solid fa-phone cursor-pointer hover:text-white"></i>
                             <button onclick="declareWar()" class="text-red-500 hover:text-red-400">
                                 <i class="fa-solid fa-bomb"></i>
                             </button>
@@ -101,14 +113,15 @@
                     </div>
 
                     <!-- Messages -->
-                    <div id="messages" class="flex-1 p-6 overflow-auto bg-[#0f0f0f] space-y-4"></div>
+                    <div id="messages" class="flex-1 p-5 overflow-auto bg-[#0f0f0f] space-y-3"></div>
 
-                    <!-- Input Bar -->
-                    <div class="p-4 border-t border-zinc-800 bg-zinc-900 flex items-center gap-x-2">
-                        <i class="fa-regular fa-smile text-xl text-zinc-400 cursor-pointer"></i>
-                        <input id="msg-input" type="text" placeholder="Mensagem" class="flex-1 bg-zinc-950 border border-zinc-700 rounded-3xl px-5 py-3 text-sm" onkeypress="if(event.key === 'Enter') sendMessage()">
-                        <button onclick="sendMessage()" class="text-green-500 text-xl px-2">
-                            <i class="fa-solid fa-paper-plane"></i>
+                    <!-- Input Bar (WhatsApp style) -->
+                    <div class="p-3 border-t border-zinc-800 bg-zinc-900 flex items-center gap-x-2">
+                        <i class="fa-regular fa-smile text-xl text-zinc-400 cursor-pointer hover:text-white"></i>
+                        <i class="fa-solid fa-paperclip text-xl text-zinc-400 cursor-pointer hover:text-white"></i>
+                        <input id="msg-input" type="text" placeholder="Mensagem" class="flex-1 bg-zinc-950 border border-zinc-700 rounded-3xl px-4 py-2.5 text-sm" onkeypress="if(event.key === 'Enter') sendMessage()">
+                        <button onclick="sendMessage()" class="text-green-500 px-3">
+                            <i class="fa-solid fa-paper-plane text-xl"></i>
                         </button>
                     </div>
                 </div>
@@ -179,13 +192,13 @@
             facs.forEach(fac => {
                 if (fac.members.includes(currentUser.nickname)) {
                     const div = document.createElement('div');
-                    div.className = `px-4 py-3 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center gap-x-3 ${currentChatId === fac.id ? 'bg-zinc-800' : ''}`;
+                    div.className = `px-3 py-3 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center gap-x-3 ${currentChatId === fac.id ? 'bg-zinc-800' : ''}`;
                     div.innerHTML = `
                         <div class="w-9 h-9 bg-zinc-700 rounded-2xl flex items-center justify-center">
                             <i class="fa-solid fa-users text-green-400"></i>
                         </div>
-                        <div>
-                            <div class="font-semibold">${fac.name}</div>
+                        <div class="flex-1 min-w-0">
+                            <div class="font-semibold truncate">${fac.name}</div>
                             <div class="text-xs text-zinc-500">${fac.members.length} membros</div>
                         </div>
                     `;
@@ -202,7 +215,7 @@
 
             const fac = facs.find(f => f.id === facId);
             document.getElementById('chat-name').innerText = fac.name;
-            document.getElementById('chat-info').innerText = `${fac.members.length} membros • Grupo da Fac`;
+            document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
 
             renderMessages();
             renderChatList();
@@ -217,9 +230,10 @@
                 const div = document.createElement('div');
                 div.className = `flex ${msg.from === currentUser.nickname ? 'justify-end' : 'justify-start'}`;
                 div.innerHTML = `
-                    <div class="max-w-[75%]">
+                    <div class="max-w-[70%]">
                         ${msg.from !== currentUser.nickname ? `<div class="text-xs text-zinc-400 mb-1 ml-2">@${msg.from}</div>` : ''}
                         <div class="message-bubble ${msg.from === currentUser.nickname ? 'my-message' : 'other-message'}">${msg.text}</div>
+                        <div class="text-[10px] opacity-60 mt-0.5 ${msg.from === currentUser.nickname ? 'text-right pr-1' : 'pl-1'}">${new Date(msg.time).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</div>
                     </div>
                 `;
                 container.appendChild(div);
