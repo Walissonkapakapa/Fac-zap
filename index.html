@@ -276,7 +276,11 @@
 
         function updateHeaderAvatar() {
             const avatar = document.getElementById('header-avatar');
-            avatar.src = currentUser?.photo || 'https://i.pravatar.cc/32';
+            if (currentUser && currentUser.photo) {
+                avatar.src = currentUser.photo;
+            } else {
+                avatar.src = 'https://i.pravatar.cc/32';
+            }
         }
 
         function logout() {
@@ -298,7 +302,8 @@
 
         function editProfile() {
             const modal = document.getElementById('profile-modal');
-            document.getElementById('profile-avatar').src = currentUser?.photo || 'https://i.pravatar.cc/80';
+            const avatar = document.getElementById('profile-avatar');
+            avatar.src = currentUser?.photo || 'https://i.pravatar.cc/80';
             modal.classList.remove('hidden');
             modal.classList.add('flex');
         }
@@ -314,16 +319,25 @@
 
             const reader = new FileReader();
             reader.onload = async function(ev) {
-                currentUser.photo = ev.target.result;
+                const photoData = ev.target.result;
+                currentUser.photo = photoData;
+
                 try {
                     const usersRef = window.collection(window.db, "users");
                     const q = window.query(usersRef, window.where("nickname", "==", currentUser.nickname));
                     const snap = await window.getDocs(q);
+
                     if (!snap.empty) {
-                        await window.updateDoc(window.doc(window.db, "users", snap.docs[0].id), { photo: currentUser.photo });
+                        const userId = snap.docs[0].id;
+                        await window.updateDoc(window.doc(window.db, "users", userId), {
+                            photo: photoData
+                        });
                     }
-                } catch(e){}
-                document.getElementById('profile-avatar').src = currentUser.photo;
+                } catch (error) {
+                    console.error("Erro ao salvar foto do perfil:", error);
+                }
+
+                document.getElementById('profile-avatar').src = photoData;
                 updateHeaderAvatar();
             };
             reader.readAsDataURL(file);
@@ -348,11 +362,15 @@
                 const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
                 newFac.firestoreId = docRef.id;
                 facs.push(newFac);
+
                 hideCreateModal();
                 renderChatList();
                 renderOtherFacs();
                 setTimeout(() => openChat(newFac.id), 100);
-            } catch(e){ alert("Erro ao criar fac"); }
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao criar fac");
+            }
         }
 
         function showCreateFac() {
@@ -370,10 +388,16 @@
         async function joinFac(facId) {
             const fac = facs.find(f => f.id === facId);
             if (!fac || !currentUser) return;
+
             if (!fac.members.includes(currentUser.nickname)) {
                 fac.members.push(currentUser.nickname);
+
                 if (fac.firestoreId) {
-                    try { await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members }); } catch(e){}
+                    try {
+                        await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), {
+                            members: fac.members
+                        });
+                    } catch(e){}
                 }
             }
             renderChatList();
@@ -385,29 +409,43 @@
             if (!currentChatId) return;
             const fac = facs.find(f => f.id === currentChatId);
             if (!fac) return;
+
             fac.members = fac.members.filter(m => m !== currentUser.nickname);
-            if (fac.firestoreId) window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
+
+            if (fac.firestoreId) {
+                window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
+            }
             backToList();
         }
 
         async function changeFacPhoto() {
             const fac = facs.find(f => f.id === currentChatId);
-            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode mudar.');
+            if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode mudar a foto.');
 
             const input = document.createElement('input');
             input.type = 'file';
             input.accept = 'image/*';
-            input.onchange = async e => {
+            input.onchange = async (e) => {
+                const file = e.target.files[0];
+                if (!file) return;
+
                 const reader = new FileReader();
-                reader.onload = async ev => {
-                    fac.photo = ev.target.result;
+                reader.onload = async (ev) => {
+                    const photoData = ev.target.result;
+                    fac.photo = photoData;
+
                     if (fac.firestoreId) {
-                        try { await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { photo: fac.photo }); } catch(e){}
+                        try {
+                            await window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), {
+                                photo: photoData
+                            });
+                        } catch(e){}
                     }
-                    document.getElementById('chat-avatar').src = fac.photo;
+
+                    document.getElementById('chat-avatar').src = photoData;
                     renderChatList();
                 };
-                reader.readAsDataURL(e.target.files[0]);
+                reader.readAsDataURL(file);
             };
             input.click();
         }
@@ -415,7 +453,8 @@
         function deleteFac() {
             const fac = facs.find(f => f.id === currentChatId);
             if (!fac || fac.leader !== currentUser.nickname) return alert('Só o líder pode apagar.');
-            if (confirm(`Apagar ${fac.name}?`)) {
+
+            if (confirm(`Apagar a fac ${fac.name}?`)) {
                 facs = facs.filter(f => f.id !== currentChatId);
                 backToList();
             }
@@ -423,7 +462,7 @@
 
         async function clearMessages() {
             if (!currentChatId) return;
-            if (!confirm("Apagar TODAS as mensagens?")) return;
+            if (!confirm("Apagar TODAS as mensagens desta fac?")) return;
 
             try {
                 const q = window.query(window.collection(window.db, `messages_${currentChatId}`));
@@ -431,10 +470,11 @@
                 const deletions = [];
                 snap.forEach(d => deletions.push(window.deleteDoc(window.doc(window.db, `messages_${currentChatId}`, d.id))));
                 await Promise.all(deletions);
+
                 allMessages[currentChatId] = [];
                 renderMessages();
                 alert("Mensagens limpas!");
-            } catch(e){ alert("Erro"); }
+            } catch(e){ alert("Erro ao limpar"); }
         }
 
         function backToList() {
@@ -449,6 +489,7 @@
         async function openChat(facId) {
             stopMessageListener();
             currentChatId = facId;
+
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('chat-window').classList.remove('hidden');
@@ -569,8 +610,6 @@
                 } catch(err){}
             };
             reader.readAsDataURL(file);
-
-            // Limpa o input
             e.target.value = '';
         }
 
