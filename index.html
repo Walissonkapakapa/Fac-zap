@@ -167,7 +167,6 @@
         let currentChatId = null;
         let pendingFacPhoto = null;
 
-        // Carrega facs do Firebase
         async function loadFacsFromFirebase() {
             try {
                 const q = window.query(window.collection(window.db, "facs"));
@@ -178,10 +177,23 @@
                     data.firestoreId = doc.id;
                     facs.push(data);
                 });
-                console.log("Facs carregadas do Firebase:", facs.length);
             } catch (error) {
                 console.error("Erro ao carregar facs:", error);
                 facs = JSON.parse(localStorage.getItem('faczap_facs') || '[]');
+            }
+        }
+
+        async function loadMessagesFromFirebase(facId) {
+            try {
+                const q = window.query(window.collection(window.db, `messages_${facId}`));
+                const querySnapshot = await window.getDocs(q);
+                allMessages[facId] = [];
+                querySnapshot.forEach((doc) => {
+                    allMessages[facId].push(doc.data());
+                });
+            } catch (error) {
+                console.error("Erro ao carregar mensagens:", error);
+                allMessages[facId] = allMessages[facId] || [];
             }
         }
 
@@ -352,7 +364,7 @@
             renderChatList();
         }
 
-        function openChat(facId) {
+        async function openChat(facId) {
             currentChatId = facId;
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
@@ -362,6 +374,8 @@
             document.getElementById('chat-name').innerText = fac.name;
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
+
+            await loadMessagesFromFirebase(facId);
 
             const changeBtn = document.getElementById('change-fac-photo-btn');
             const deleteBtn = document.getElementById('delete-fac-btn');
@@ -465,7 +479,6 @@
 
             allMessages[currentChatId].push(messageData);
 
-            // Salva mensagem no Firestore
             try {
                 await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), messageData);
             } catch (error) {
