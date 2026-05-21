@@ -258,39 +258,54 @@
         }
 
         async function createFac() {
-            const name = document.getElementById('fac-name').value.trim();
-            if (!name) return;
-
-            // Verifica duplicado de forma mais segura
-            const nameExists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
-            if (nameExists) {
-                alert('Já existe uma fac com esse nome!');
-                return;
-            }
-
-            const newFac = {
-                id: Date.now(),
-                name: name,
-                leader: currentUser.nickname,
-                members: [currentUser.nickname],
-                photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
-            };
-
             try {
-                const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
-                newFac.firestoreId = docRef.id;
-                console.log("Fac criada e salva no Firebase");
-            } catch (error) {
-                console.error("Erro ao salvar fac no Firebase:", error);
-            }
+                const nameInput = document.getElementById('fac-name');
+                const name = nameInput ? nameInput.value.trim() : '';
 
-            facs.push(newFac);
-            allMessages[newFac.id] = [];
-            save();
-            hideCreateModal();
-            renderChatList();
-            renderOtherFacs();
-            setTimeout(() => openChat(newFac.id), 150);
+                if (!name) {
+                    alert("Nome da fac é obrigatório");
+                    return;
+                }
+
+                // Verifica duplicado de forma segura
+                const nameExists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
+                if (nameExists) {
+                    alert('Já existe uma fac com esse nome!');
+                    return;
+                }
+
+                const newFac = {
+                    id: Date.now(),
+                    name: name,
+                    leader: currentUser ? currentUser.nickname : 'Desconhecido',
+                    members: currentUser ? [currentUser.nickname] : [],
+                    photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
+                };
+
+                // Tenta salvar no Firebase
+                try {
+                    const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
+                    newFac.firestoreId = docRef.id;
+                } catch (fbError) {
+                    console.warn("Não foi possível salvar no Firebase (usando apenas local):", fbError);
+                }
+
+                facs.push(newFac);
+                allMessages[newFac.id] = [];
+                save();
+
+                hideCreateModal();
+                renderChatList();
+                renderOtherFacs();
+
+                setTimeout(() => {
+                    openChat(newFac.id);
+                }, 150);
+
+            } catch (error) {
+                console.error("Erro ao criar fac:", error);
+                alert("Ocorreu um erro ao criar a fac. Tente novamente.");
+            }
         }
 
         function joinFac(facId) {
