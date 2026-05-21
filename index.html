@@ -136,7 +136,7 @@
     <!-- Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDg5pqfwpO12boJpyZuJI0L-WCIrfttMFs",
@@ -155,7 +155,6 @@
         window.collection = collection;
         window.getDocs = getDocs;
         window.query = query;
-        window.orderBy = orderBy;
 
         console.log("Firebase carregado");
     </script>
@@ -262,7 +261,8 @@
             const name = document.getElementById('fac-name').value.trim();
             if (!name) return;
 
-            const nameExists = facs.some(f => f.name.toLowerCase() === name.toLowerCase());
+            // Verifica duplicado de forma mais segura
+            const nameExists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
             if (nameExists) {
                 alert('Já existe uma fac com esse nome!');
                 return;
@@ -279,8 +279,9 @@
             try {
                 const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
                 newFac.firestoreId = docRef.id;
+                console.log("Fac criada e salva no Firebase");
             } catch (error) {
-                console.error("Erro ao salvar fac:", error);
+                console.error("Erro ao salvar fac no Firebase:", error);
             }
 
             facs.push(newFac);
@@ -371,6 +372,8 @@
             document.getElementById('chat-window').classList.remove('hidden');
 
             const fac = facs.find(f => f.id === facId);
+            if (!fac) return;
+
             document.getElementById('chat-name').innerText = fac.name;
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
@@ -391,7 +394,7 @@
             container.innerHTML = '';
 
             facs.forEach(fac => {
-                if (fac.members.includes(currentUser.nickname)) {
+                if (fac.members && fac.members.includes(currentUser.nickname)) {
                     const div = document.createElement('div');
                     div.className = `px-3 py-3 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center gap-x-3`;
                     div.innerHTML = `
@@ -413,7 +416,7 @@
 
             let hasOther = false;
             facs.forEach(fac => {
-                if (!fac.members.includes(currentUser.nickname)) {
+                if (fac.members && !fac.members.includes(currentUser.nickname)) {
                     hasOther = true;
                     const div = document.createElement('div');
                     div.className = 'px-3 py-2 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center justify-between text-sm';
