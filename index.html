@@ -108,7 +108,7 @@
             <h3 class="font-semibold mb-4">Criar Nova Fac</h3>
             
             <div class="flex flex-col items-center mb-4">
-                <img id="fac-preview" src="https://i.pravatar.cc/80?img=3" class="w-20 h-20 rounded-2xl object-cover border border-zinc-700 mb-2">
+                <img id="fac-preview" src="https://picsum.photos/id/1011/80/80" class="w-20 h-20 rounded-2xl object-cover border border-zinc-700 mb-2">
                 <input type="file" id="fac-photo-upload" accept="image/*" class="hidden" onchange="previewFacPhoto(event)">
                 <button onclick="document.getElementById('fac-photo-upload').click()" class="text-xs bg-zinc-800 px-3 py-1 rounded-xl">Escolher foto da fac</button>
             </div>
@@ -199,7 +199,7 @@
 
         function showCreateFac() {
             pendingFacPhoto = null;
-            document.getElementById('fac-preview').src = 'https://i.pravatar.cc/80?img=3';
+            document.getElementById('fac-preview').src = 'https://picsum.photos/id/1011/80/80';
             document.getElementById('create-modal').classList.remove('hidden');
             document.getElementById('create-modal').classList.add('flex');
         }
@@ -218,7 +218,7 @@
                 name: name,
                 leader: currentUser.nickname,
                 members: [currentUser.nickname],
-                photo: pendingFacPhoto || 'https://i.pravatar.cc/80?img=3'
+                photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
             };
             facs.push(newFac);
             allMessages[newFac.id] = [];
@@ -270,8 +270,7 @@
             const fac = facs.find(f => f.id === facId);
             document.getElementById('chat-name').innerText = fac.name;
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
-            // Usa a foto da fac no header do chat
-            document.getElementById('chat-avatar').src = fac.photo || 'https://i.pravatar.cc/40';
+            document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
 
             renderMessages();
         }
@@ -285,7 +284,7 @@
                     const div = document.createElement('div');
                     div.className = `px-3 py-3 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center gap-x-3`;
                     div.innerHTML = `
-                        <img src="${fac.photo || 'https://i.pravatar.cc/32?img=3'}" class="w-9 h-9 rounded-2xl object-cover border border-zinc-700">
+                        <img src="${fac.photo || 'https://picsum.photos/id/1011/80/80'}" class="w-9 h-9 rounded-2xl object-cover border border-zinc-700">
                         <div class="flex-1 min-w-0">
                             <div class="font-semibold truncate">${fac.name}</div>
                             <div class="text-xs text-zinc-500">${fac.members.length} membros</div>
@@ -309,7 +308,7 @@
                     div.className = 'px-3 py-2 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center justify-between text-sm';
                     div.innerHTML = `
                         <div class="flex items-center gap-x-2">
-                            <img src="${fac.photo || 'https://i.pravatar.cc/32?img=3'}" class="w-7 h-7 rounded-xl object-cover">
+                            <img src="${fac.photo || 'https://picsum.photos/id/1011/80/80'}" class="w-7 h-7 rounded-xl object-cover">
                             <span>${fac.name}</span>
                         </div>
                         <button class="text-xs bg-green-600 px-2 py-0.5 rounded">Entrar</button>
