@@ -131,7 +131,7 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, updateDoc, doc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, updateDoc, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
         const firebaseConfig = { /* cole seu config aqui */ };
 
@@ -145,6 +145,7 @@
         window.query = query;
         window.updateDoc = updateDoc;
         window.doc = doc;
+        window.onSnapshot = onSnapshot;
     </script>
 
     <script>
@@ -153,6 +154,7 @@
         let allMessages = {};
         let currentChatId = null;
         let pendingFacPhoto = null;
+        let unsubscribeMessages = null;
 
         async function loadFacsFromFirebase() {
             try {
@@ -164,44 +166,129 @@
                     data.firestoreId = d.id;
                     facs.push(data);
                 });
-            } catch(e){ console.error("Erro ao carregar facs:", e); }
+            } catch(e){ console.error(e); }
+        }
+
+        function startMessageListener(facId) {
+            if (unsubscribeMessages) unsubscribeMessages();
+
+            const q = window.query(window.collection(window.db, `messages_${facId}`));
+
+            unsubscribeMessages = window.onSnapshot(q, (snapshot) => {
+                allMessages[facId] = [];
+                snapshot.forEach(doc => allMessages[facId].push(doc.data()));
+                if (currentChatId === facId) renderMessages();
+            });
+        }
+
+        function stopMessageListener() {
+            if (unsubscribeMessages) {
+                unsubscribeMessages();
+                unsubscribeMessages = null;
+            }
+        }
+
+        async function register() {
+            const nick = document.getElementById('register-nickname').value.trim();
+            const pass = document.getElementById('register-password').value.trim();
+            if (!nick || !pass) return alert("Preencha apelido e senha");
+
+            try {
+                const usersRef = window.collection(window.db, "users");
+                const q = window.query(usersRef, window.where("nickname", "==", nick));
+                const snap = await window.getDocs(q);
+                if (!snap.empty) return alert("Esse apelido já existe");
+
+                await window.addDoc(usersRef, { nickname: nick, password: pass });
+                alert("Conta criada! Agora faça login.");
+                showLogin();
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao cadastrar");
+            }
+        }
+
+        async function login() {
+            const nick = document.getElementById('login-nickname').value.trim();
+            const pass = document.getElementById('login-password').value.trim();
+            if (!nick || !pass) return alert("Preencha apelido e senha");
+
+            try {
+                const q = window.query(window.collection(window.db, "users"), 
+                    window.where("nickname", "==", nick), 
+                    window.where("password", "==", pass));
+                const snap = await window.getDocs(q);
+
+                if (snap.empty) return alert("Apelido ou senha incorretos");
+
+                currentUser = { nickname: nick };
+                await loadFacsFromFirebase();
+
+                document.getElementById('auth-screen').classList.add('hidden');
+                document.getElementById('main-app').classList.remove('hidden');
+                document.getElementById('current-user').innerText = '@' + nick;
+                renderChatList();
+                renderOtherFacs();
+            } catch (error) {
+                console.error(error);
+                alert("Erro ao fazer login");
+            }
+        }
+
+        function logout() {
+            stopMessageListener();
+            currentUser = null;
+            location.reload();
+        }
+
+        function showRegister() {
+            document.getElementById('login-form').classList.add('hidden');
+            document.getElementById('register-form').classList.remove('hidden');
+        }
+
+        function showLogin() {
+            document.getElementById('register-form').classList.add('hidden');
+            document.getElementById('login-form').classList.remove('hidden');
         }
 
         async function createFac() {
+            const name = document.getElementById('fac-name').value.trim();
+            if (!name || !currentUser) return;
+
+            const exists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
+            if (exists) return alert("Já existe uma fac com esse nome");
+
+            const newFac = {
+                id: Date.now(),
+                name: name,
+                leader: currentUser.nickname,
+                members: [currentUser.nickname],
+                photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
+            };
+
             try {
-                const name = document.getElementById('fac-name').value.trim();
-                if (!name) return alert("Digite um nome para a fac");
-                if (!currentUser) return alert("Faça login primeiro");
-
-                const exists = facs.some(f => f.name && f.name.toLowerCase() === name.toLowerCase());
-                if (exists) return alert("Já existe uma fac com esse nome");
-
-                const newFac = {
-                    id: Date.now(),
-                    name: name,
-                    leader: currentUser.nickname,
-                    members: [currentUser.nickname],
-                    photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
-                };
-
-                // Tenta salvar no Firebase
-                try {
-                    const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
-                    newFac.firestoreId = docRef.id;
-                } catch (fbError) {
-                    console.warn("Não salvou no Firebase, usando apenas local:", fbError);
-                }
-
+                const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
+                newFac.firestoreId = docRef.id;
                 facs.push(newFac);
+
                 hideCreateModal();
                 renderChatList();
                 renderOtherFacs();
                 setTimeout(() => openChat(newFac.id), 100);
-
             } catch (error) {
                 console.error("Erro ao criar fac:", error);
-                alert("Ocorreu um erro ao criar a fac. Veja o console.");
+                alert("Erro ao criar fac");
             }
+        }
+
+        function showCreateFac() {
+            document.getElementById('create-modal').classList.remove('hidden');
+            document.getElementById('create-modal').classList.add('flex');
+        }
+
+        function hideCreateModal() {
+            document.getElementById('create-modal').classList.remove('flex');
+            document.getElementById('create-modal').classList.add('hidden');
         }
 
         async function joinFac(facId) {
@@ -230,20 +317,15 @@
             if (!fac) return;
 
             fac.members = fac.members.filter(m => m !== currentUser.nickname);
+
+            if (fac.firestoreId) {
+                window.updateDoc(window.doc(window.db, "facs", fac.firestoreId), { members: fac.members });
+            }
             backToList();
         }
 
-        function showCreateFac() {
-            document.getElementById('create-modal').classList.remove('hidden');
-            document.getElementById('create-modal').classList.add('flex');
-        }
-
-        function hideCreateModal() {
-            document.getElementById('create-modal').classList.remove('flex');
-            document.getElementById('create-modal').classList.add('hidden');
-        }
-
         function backToList() {
+            stopMessageListener();
             currentChatId = null;
             document.getElementById('chat-window').classList.add('hidden');
             document.getElementById('empty-state').classList.remove('hidden');
@@ -252,7 +334,9 @@
         }
 
         async function openChat(facId) {
+            stopMessageListener();
             currentChatId = facId;
+
             document.getElementById('sidebar').classList.add('hidden');
             document.getElementById('empty-state').classList.add('hidden');
             document.getElementById('chat-window').classList.remove('hidden');
@@ -264,14 +348,7 @@
             document.getElementById('chat-info').innerText = `${fac.members.length} membros`;
             document.getElementById('chat-avatar').src = fac.photo || 'https://picsum.photos/id/1011/80/80';
 
-            try {
-                const q = window.query(window.collection(window.db, `messages_${facId}`));
-                const snap = await window.getDocs(q);
-                allMessages[facId] = [];
-                snap.forEach(d => allMessages[facId].push(d.data()));
-            } catch(e){ allMessages[facId] = []; }
-
-            renderMessages();
+            startMessageListener(facId);
         }
 
         function renderChatList() {
@@ -355,58 +432,10 @@
             renderMessages();
         }
 
-        window.onload = async () => {
-            const saved = localStorage.getItem('faczap_user');
-            if (saved) {
-                currentUser = JSON.parse(saved);
-                await loadFacsFromFirebase();
-                document.getElementById('auth-screen').classList.add('hidden');
-                document.getElementById('main-app').classList.remove('hidden');
-                document.getElementById('current-user').innerText = '@' + currentUser.nickname;
-                renderChatList();
-                renderOtherFacs();
-            }
+        window.onload = () => {
+            // Não carrega nada do localStorage automaticamente
+            // Usuário precisa fazer login toda vez (ou podemos melhorar depois)
         };
-
-        function showRegister() {
-            document.getElementById('login-form').classList.add('hidden');
-            document.getElementById('register-form').classList.remove('hidden');
-        }
-        function showLogin() {
-            document.getElementById('register-form').classList.add('hidden');
-            document.getElementById('login-form').classList.remove('hidden');
-        }
-
-        async function login() {
-            const nick = document.getElementById('login-nickname').value.trim();
-            if (!nick) return;
-            currentUser = { nickname: nick };
-            localStorage.setItem('faczap_user', JSON.stringify(currentUser));
-            await loadFacsFromFirebase();
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('current-user').innerText = '@' + nick;
-            renderChatList();
-            renderOtherFacs();
-        }
-
-        function logout() {
-            localStorage.removeItem('faczap_user');
-            location.reload();
-        }
-
-        async function register() {
-            const nick = document.getElementById('register-nickname').value.trim();
-            if (!nick) return alert("Digite um apelido");
-            currentUser = { nickname: nick };
-            localStorage.setItem('faczap_user', JSON.stringify(currentUser));
-            await loadFacsFromFirebase();
-            document.getElementById('auth-screen').classList.add('hidden');
-            document.getElementById('main-app').classList.remove('hidden');
-            document.getElementById('current-user').innerText = '@' + nick;
-            renderChatList();
-            renderOtherFacs();
-        }
     </script>
 </body>
 </html>
