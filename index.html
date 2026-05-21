@@ -7,28 +7,9 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
-        .message-bubble {
-            max-width: 65%;
-            padding: 8px 12px;
-            border-radius: 7.5px;
-            position: relative;
-        }
-        .my-message {
-            background-color: #22c55e;
-            color: black;
-            border-bottom-right-radius: 2px;
-        }
-        .other-message {
-            background-color: #27272a;
-            color: #e5e5e5;
-            border-bottom-left-radius: 2px;
-        }
-        .chat-header {
-            background-color: #18181b;
-        }
-        .sidebar {
-            background-color: #111111;
-        }
+        .message-bubble { max-width: 65%; padding: 8px 12px; border-radius: 7.5px; }
+        .my-message { background-color: #22c55e; color: black; border-bottom-right-radius: 2px; }
+        .other-message { background-color: #27272a; color: #e5e5e5; border-bottom-left-radius: 2px; }
     </style>
 </head>
 <body class="bg-zinc-950 text-white">
@@ -51,7 +32,6 @@
 
     <!-- Main App -->
     <div id="main-app" class="hidden h-screen flex flex-col">
-        <!-- Top Bar -->
         <div class="bg-zinc-900 border-b border-zinc-800 px-5 py-3 flex justify-between items-center">
             <div class="flex items-center gap-x-2">
                 <i class="fa-brands fa-whatsapp text-green-500 text-2xl"></i>
@@ -64,36 +44,36 @@
         </div>
 
         <div class="flex flex-1 overflow-hidden">
-            <!-- Sidebar (WhatsApp style) -->
-            <div class="w-80 sidebar border-r border-zinc-800 flex flex-col">
+            <!-- Sidebar -->
+            <div class="w-80 border-r border-zinc-800 flex flex-col">
                 <div class="p-3 border-b border-zinc-800">
-                    <div class="relative">
-                        <input type="text" placeholder="Buscar facs..." class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl pl-10 py-2 text-sm">
-                        <i class="fa-solid fa-search absolute left-4 top-3 text-zinc-500"></i>
-                    </div>
+                    <input type="text" placeholder="Buscar..." class="w-full bg-zinc-950 border border-zinc-700 rounded-2xl px-4 py-2 text-sm">
                 </div>
 
                 <div class="p-3">
-                    <button onclick="showCreateFac()" class="w-full flex items-center justify-center gap-x-2 bg-green-600 hover:bg-green-700 py-2 rounded-2xl font-semibold text-sm">
+                    <button onclick="showCreateFac()" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded-2xl font-semibold text-sm flex items-center justify-center gap-x-2">
                         <i class="fa-solid fa-plus"></i>
                         <span>Criar Nova Fac</span>
                     </button>
                 </div>
 
-                <div class="px-2 flex-1 overflow-auto" id="chat-list">
-                    <!-- Populated by JS -->
+                <div class="px-2 text-xs uppercase tracking-widest text-zinc-500 px-3 mb-1">Minhas Facs</div>
+                <div class="px-2 flex-1 overflow-auto" id="chat-list"></div>
+
+                <div class="px-2 mt-2">
+                    <div class="text-xs uppercase tracking-widest text-zinc-500 px-3 mb-1">Outras Facs (Entrar)</div>
+                    <div id="other-facs-list" class="px-2"></div>
                 </div>
             </div>
 
-            <!-- Chat Area -->
+            <!-- Chat -->
             <div class="flex-1 flex flex-col">
                 <div id="empty-state" class="flex-1 flex items-center justify-center text-zinc-500">
-                    Selecione uma fac para começar
+                    Selecione ou entre em uma fac
                 </div>
 
                 <div id="chat-window" class="hidden flex-1 flex flex-col">
-                    <!-- Chat Header (WhatsApp style) -->
-                    <div class="chat-header px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between">
+                    <div class="px-4 py-2.5 border-b border-zinc-800 flex items-center justify-between bg-[#18181b]">
                         <div class="flex items-center gap-x-3">
                             <div class="w-10 h-10 bg-zinc-700 rounded-full flex items-center justify-center">
                                 <i class="fa-solid fa-users text-green-400"></i>
@@ -103,26 +83,18 @@
                                 <div id="chat-info" class="text-xs text-emerald-400"></div>
                             </div>
                         </div>
-                        <div class="flex items-center gap-x-5 text-lg text-zinc-400">
-                            <i class="fa-solid fa-video cursor-pointer hover:text-white"></i>
-                            <i class="fa-solid fa-phone cursor-pointer hover:text-white"></i>
-                            <button onclick="declareWar()" class="text-red-500 hover:text-red-400">
-                                <i class="fa-solid fa-bomb"></i>
-                            </button>
+                        <div class="flex items-center gap-x-4">
+                            <button onclick="leaveFac()" class="text-xs px-3 py-1 bg-zinc-800 hover:bg-red-600 rounded-xl">Sair da Fac</button>
+                            <button onclick="declareWar()" class="text-red-500"><i class="fa-solid fa-bomb"></i></button>
                         </div>
                     </div>
 
-                    <!-- Messages -->
                     <div id="messages" class="flex-1 p-5 overflow-auto bg-[#0f0f0f] space-y-3"></div>
 
-                    <!-- Input Bar (WhatsApp style) -->
                     <div class="p-3 border-t border-zinc-800 bg-zinc-900 flex items-center gap-x-2">
-                        <i class="fa-regular fa-smile text-xl text-zinc-400 cursor-pointer hover:text-white"></i>
-                        <i class="fa-solid fa-paperclip text-xl text-zinc-400 cursor-pointer hover:text-white"></i>
+                        <i class="fa-regular fa-smile text-xl text-zinc-400"></i>
                         <input id="msg-input" type="text" placeholder="Mensagem" class="flex-1 bg-zinc-950 border border-zinc-700 rounded-3xl px-4 py-2.5 text-sm" onkeypress="if(event.key === 'Enter') sendMessage()">
-                        <button onclick="sendMessage()" class="text-green-500 px-3">
-                            <i class="fa-solid fa-paper-plane text-xl"></i>
-                        </button>
+                        <button onclick="sendMessage()" class="text-green-500 px-3"><i class="fa-solid fa-paper-plane text-xl"></i></button>
                     </div>
                 </div>
             </div>
@@ -158,6 +130,7 @@
             document.getElementById('main-app').classList.remove('hidden');
             document.getElementById('current-user').innerText = '@' + nick;
             renderChatList();
+            renderOtherFacs();
         }
 
         function logout() { location.reload(); }
@@ -182,7 +155,36 @@
             save();
             hideCreateModal();
             renderChatList();
+            renderOtherFacs();
             setTimeout(() => openChat(newFac.id), 150);
+        }
+
+        function joinFac(facId) {
+            const fac = facs.find(f => f.id === facId);
+            if (!fac) return;
+            if (!fac.members.includes(currentUser.nickname)) {
+                fac.members.push(currentUser.nickname);
+                save();
+            }
+            renderChatList();
+            renderOtherFacs();
+            openChat(facId);
+        }
+
+        function leaveFac() {
+            if (!currentChatId) return;
+            const fac = facs.find(f => f.id === currentChatId);
+            if (!fac) return;
+
+            if (confirm(`Sair da fac ${fac.name}?`)) {
+                fac.members = fac.members.filter(m => m !== currentUser.nickname);
+                save();
+                currentChatId = null;
+                document.getElementById('chat-window').classList.add('hidden');
+                document.getElementById('empty-state').classList.remove('hidden');
+                renderChatList();
+                renderOtherFacs();
+            }
         }
 
         function renderChatList() {
@@ -206,6 +208,33 @@
                     container.appendChild(div);
                 }
             });
+        }
+
+        function renderOtherFacs() {
+            const container = document.getElementById('other-facs-list');
+            container.innerHTML = '';
+
+            let hasOther = false;
+            facs.forEach(fac => {
+                if (!fac.members.includes(currentUser.nickname)) {
+                    hasOther = true;
+                    const div = document.createElement('div');
+                    div.className = 'px-3 py-2 hover:bg-zinc-800 rounded-2xl cursor-pointer flex items-center justify-between text-sm';
+                    div.innerHTML = `
+                        <div>${fac.name}</div>
+                        <button class="text-xs bg-green-600 px-2 py-0.5 rounded">Entrar</button>
+                    `;
+                    div.querySelector('button').onclick = (e) => {
+                        e.stopImmediatePropagation();
+                        joinFac(fac.id);
+                    };
+                    container.appendChild(div);
+                }
+            });
+
+            if (!hasOther) {
+                container.innerHTML = `<div class="text-xs text-zinc-500 px-3">Nenhuma outra fac disponível</div>`;
+            }
         }
 
         function openChat(facId) {
@@ -233,7 +262,7 @@
                     <div class="max-w-[70%]">
                         ${msg.from !== currentUser.nickname ? `<div class="text-xs text-zinc-400 mb-1 ml-2">@${msg.from}</div>` : ''}
                         <div class="message-bubble ${msg.from === currentUser.nickname ? 'my-message' : 'other-message'}">${msg.text}</div>
-                        <div class="text-[10px] opacity-60 mt-0.5 ${msg.from === currentUser.nickname ? 'text-right pr-1' : 'pl-1'}">${new Date(msg.time).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}</div>
+                        <div class="text-[10px] opacity-60 mt-0.5 ${msg.from === currentUser.nickname ? 'text-right pr-1' : 'pl-1'}">${new Date(msg.time).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
                     </div>
                 `;
                 container.appendChild(div);
@@ -281,6 +310,7 @@
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('current-user').innerText = '@' + currentUser.nickname;
                 renderChatList();
+                renderOtherFacs();
             }
         }
 
