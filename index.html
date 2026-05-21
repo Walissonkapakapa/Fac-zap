@@ -136,7 +136,7 @@
     <!-- Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
-        import { getFirestore, collection, addDoc } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyDg5pqfwpO12boJpyZuJI0L-WCIrfttMFs",
@@ -153,16 +153,37 @@
         window.db = db;
         window.addDoc = addDoc;
         window.collection = collection;
+        window.getDocs = getDocs;
+        window.query = query;
+        window.orderBy = orderBy;
 
-        console.log("Firebase inicializado");
+        console.log("Firebase carregado");
     </script>
 
     <script>
         let currentUser = null;
-        let facs = JSON.parse(localStorage.getItem('faczap_facs') || '[]');
-        let allMessages = JSON.parse(localStorage.getItem('faczap_messages') || '{}');
+        let facs = [];
+        let allMessages = {};
         let currentChatId = null;
         let pendingFacPhoto = null;
+
+        // Carrega facs do Firebase
+        async function loadFacsFromFirebase() {
+            try {
+                const q = window.query(window.collection(window.db, "facs"));
+                const querySnapshot = await window.getDocs(q);
+                facs = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    data.firestoreId = doc.id;
+                    facs.push(data);
+                });
+                console.log("Facs carregadas do Firebase:", facs.length);
+            } catch (error) {
+                console.error("Erro ao carregar facs:", error);
+                facs = JSON.parse(localStorage.getItem('faczap_facs') || '[]');
+            }
+        }
 
         function save() {
             localStorage.setItem('faczap_facs', JSON.stringify(facs));
@@ -170,13 +191,15 @@
             if (currentUser) localStorage.setItem('faczap_user', JSON.stringify(currentUser));
         }
 
-        function login() {
+        async function login() {
             const nick = document.getElementById('nickname').value.trim();
             if (!nick) return;
 
             currentUser = JSON.parse(localStorage.getItem('faczap_user')) || { nickname: nick, avatar: 'https://i.pravatar.cc/128?img=47' };
             if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
             localStorage.setItem('faczap_user', JSON.stringify(currentUser));
+
+            await loadFacsFromFirebase();
 
             document.getElementById('login-screen').classList.add('hidden');
             document.getElementById('main-app').classList.remove('hidden');
@@ -241,13 +264,11 @@
                 photo: pendingFacPhoto || 'https://picsum.photos/id/1011/80/80'
             };
 
-            // Salva no Firestore
             try {
                 const docRef = await window.addDoc(window.collection(window.db, "facs"), newFac);
                 newFac.firestoreId = docRef.id;
-                console.log("Fac salva no Firebase com ID:", docRef.id);
             } catch (error) {
-                console.error("Erro ao salvar fac no Firebase:", error);
+                console.error("Erro ao salvar fac:", error);
             }
 
             facs.push(newFac);
@@ -430,17 +451,26 @@
             container.scrollTop = container.scrollHeight;
         }
 
-        function sendMessage() {
+        async function sendMessage() {
             const input = document.getElementById('msg-input');
             if (!input.value.trim() || !currentChatId) return;
 
             if (!allMessages[currentChatId]) allMessages[currentChatId] = [];
 
-            allMessages[currentChatId].push({
+            const messageData = {
                 from: currentUser.nickname,
                 text: input.value.trim(),
                 time: new Date().toISOString()
-            });
+            };
+
+            allMessages[currentChatId].push(messageData);
+
+            // Salva mensagem no Firestore
+            try {
+                await window.addDoc(window.collection(window.db, `messages_${currentChatId}`), messageData);
+            } catch (error) {
+                console.error("Erro ao salvar mensagem:", error);
+            }
 
             save();
             input.value = '';
@@ -462,11 +492,14 @@
             renderMessages();
         }
 
-        function checkLogin() {
+        async function checkLogin() {
             const user = localStorage.getItem('faczap_user');
             if (user) {
                 currentUser = JSON.parse(user);
                 if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
+
+                await loadFacsFromFirebase();
+
                 document.getElementById('login-screen').classList.add('hidden');
                 document.getElementById('main-app').classList.remove('hidden');
                 document.getElementById('current-user').innerText = '@' + currentUser.nickname;
