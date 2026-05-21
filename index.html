@@ -133,6 +133,28 @@
         </div>
     </div>
 
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyDg5pqfwpO12boJpyZuJI0L-WCIrfttMFs",
+            authDomain: "faczap-1b2b8.firebaseapp.com",
+            projectId: "faczap-1b2b8",
+            storageBucket: "faczap-1b2b8.firebasestorage.app",
+            messagingSenderId: "273370846564",
+            appId: "1:273370846564:web:6f5cf35be2d1e3ea2dd671"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // Disponibiliza o db globalmente
+        window.db = db;
+        console.log("Firebase inicializado com sucesso");
+    </script>
+
     <script>
         let currentUser = null;
         let facs = JSON.parse(localStorage.getItem('faczap_facs') || '[]');
@@ -149,15 +171,6 @@
         function login() {
             const nick = document.getElementById('nickname').value.trim();
             if (!nick) return;
-
-            const existingUsers = Object.keys(localStorage).filter(k => k.startsWith('faczap_user_'));
-            for (let key of existingUsers) {
-                const u = JSON.parse(localStorage.getItem(key));
-                if (u && u.nickname.toLowerCase() === nick.toLowerCase()) {
-                    alert('Esse nome de usuário já existe!');
-                    return;
-                }
-            }
 
             currentUser = JSON.parse(localStorage.getItem('faczap_user')) || { nickname: nick, avatar: 'https://i.pravatar.cc/128?img=47' };
             if (!currentUser.avatar) currentUser.avatar = 'https://i.pravatar.cc/128?img=47';
