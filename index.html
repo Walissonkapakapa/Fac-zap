@@ -102,7 +102,7 @@
         </div>
     </div>
 
-    <!-- Create Fac Modal (com foto) -->
+    <!-- Create Fac Modal -->
     <div id="create-modal" onclick="if(event.target.id==='create-modal') hideCreateModal()" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center">
         <div onclick="event.stopImmediatePropagation()" class="bg-zinc-900 p-6 rounded-3xl w-full max-w-md mx-4">
             <h3 class="font-semibold mb-4">Criar Nova Fac</h3>
@@ -270,7 +270,8 @@
             const fac = facs.find(f => f.id === facId);
             document.getElementById('chat-name').innerText = fac.name;
             document.getElementById('chat-info').innerText = `${fac.members.length} membros • online`;
-            document.getElementById('chat-avatar').src = fac.photo || currentUser.avatar;
+            // Usa a foto da fac no header do chat
+            document.getElementById('chat-avatar').src = fac.photo || 'https://i.pravatar.cc/40';
 
             renderMessages();
         }
